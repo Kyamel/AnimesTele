@@ -49,4 +49,4 @@ Contributions are welcome! If you want to contribute to the development of Anime
 
 ## License
 
-This project is licensed under the The GNU General Public License v3.0.
+This project is licensed under the The GNU Affero General Public License v3.0 (AGPL v3.0).
