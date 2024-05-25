@@ -1,0 +1,29 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Select Argument and Run",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "args": ["${input:selectMode}"]
+        }
+    ],
+    "inputs": [
+        {
+            "id": "selectMode",
+            "type": "pickString",
+            "description": "Select the mode to run the script",
+            "options": [
+                "local_windows_run",
+                "local_windows_debug",
+                "server_run",
+                "server_debug",
+                "local_linux_run",
+                "local_linux_debug"
+            ],
+            "default": "local_windows_run"
+        }
+    ]
+}

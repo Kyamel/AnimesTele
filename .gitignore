@@ -1,0 +1,3 @@
+*.pyc
+shared_components/api/bot_api/sensitive/*
+venv/
