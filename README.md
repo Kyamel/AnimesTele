@@ -1,5 +1,7 @@
 # AnimesTele
 
+![Project Logo](assets/images/logo_animestele.jpg)
+
 AnimesTele is a project aimed at creating a Telegram bot to provide information and resources related to anime.
 
 ## Key Features
@@ -21,6 +23,7 @@ To get started with AnimesTele, follow these steps:
 4. **Check Episodes**: After finding an anime of interest, you can use the `/episodes` command followed by the anime name to get a list of available episodes.
 
 5. **Receive Notifications**: If you wish to receive automatic notifications of new episodes, use the `/subscribe` command.
+
 ## Contribution
 
 Contributions are welcome! If you want to contribute to the development of AnimesTele, follow these steps:
@@ -42,9 +45,9 @@ Contributions are welcome! If you want to contribute to the development of Anime
 - Programming Language: Python
 - Web Framework: FastAPI
 - Telegram Bot Framework: python-telegram-bot
-- Database: 
-    - Server: PostgreSQL
-    - Local: SQLite
+- Database:
+  - Server: PostgreSQL
+  - Local: SQLite
 - External APIs: Jikan API (for obtaining anime information from MyAnimeList)
 
 ## License
