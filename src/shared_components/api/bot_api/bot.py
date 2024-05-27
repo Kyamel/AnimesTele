@@ -30,7 +30,6 @@ class Telena:
             print(f"Erro ao escrever mensagem: {e}")
             return None
 
-
     def search_message(self, chat_id, query):
         messages = self.bot.search_messages(chat_id, query)
         return messages
@@ -50,4 +49,13 @@ class Telena:
             print("Mensagem editada com sucesso!")
         except Exception as e:
             print(f"Erro ao editar mensagem: {e}")
+
+    # Função para modificar a imagem de perfil do canal
+    def modificar_imagem_perfil(self, chat_id,image_path):
+        try:
+            with open(image_path, 'rb') as photo:
+                self.bot.set_chat_photo(chat_id=chat_id, photo=photo)
+            print("Imagem de perfil do canal modificada com sucesso!")
+        except Exception as e:
+            print(f"Erro ao modificar imagem de perfil do canal: {e}")
 

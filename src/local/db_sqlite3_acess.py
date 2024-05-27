@@ -15,7 +15,7 @@ def data_collect_and_insert_in_database(extract_amount = 1, start_page = 1, data
      - print_log: Boolean indicating whether to print log messages.
 
     Rreturns:
-     - void return.
+     - None.
     '''
     watch_links, download_links, animes_metadata = data_colect.data_extract(extract_amount=extract_amount, start_page=start_page, print_log=print_log)
     # Conectar ao banco de dados SQLite
@@ -93,7 +93,7 @@ def data_print(database_path=values.DATABASE_PATH, num_animes=10, num_episodes=1
      - return_all: Print all animes and all episodes in the database (heavy workload).
 
     Return:
-     - void returm.
+     - None.
     '''
     db = Database(database_path)
     print("\n>>>>>> ANIMES <<<<<<\n")
