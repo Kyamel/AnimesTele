@@ -1,6 +1,6 @@
 # AnimesTele
 
-![Project Logo](assets/images/logo.jpg)
+![Project Logo](logo.jpg)
 
 AnimesTele is a project aimed at creating a Telegram bot to provide information and resources related to anime.
 
