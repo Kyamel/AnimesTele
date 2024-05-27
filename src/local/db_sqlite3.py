@@ -13,7 +13,8 @@ class Database:
         # Criar tabela de animes
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS animes (
-                mal_id INTEGER PRIMARY KEY,
+                anime_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mal_id INTEGER UNIQUE NOT NULL,
                 title TEXT UNIQUE NOT NULL,
                 title_english TEXT,
                 title_japanese TEXT,
@@ -28,13 +29,14 @@ class Database:
                 year INTEGER,
                 studios TEXT,
                 producers TEXT,
-                synopsis TEXT
+                synopsis TEXT,
+                added_to TEXT,
             )
         ''')
         # Criar tabela de episódios
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS episodes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                episode_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 mal_id INTEGER NOT NULL REFERENCES animes(mal_id),
                 episode_number INTEGER NOT NULL,
                 watch_link TEXT NOT NULL,
@@ -45,7 +47,8 @@ class Database:
                 UNIQUE (mal_id, episode_number),
                 UNIQUE (watch_link),
                 UNIQUE (download_link_hd),
-                UNIQUE (download_link_sd)
+                UNIQUE (download_link_sd),
+                added_to TEXT,
             )
         ''')
         self.conn.commit()

@@ -1,3 +1,6 @@
+import re
+
+
 class Anime:
     def __init__(self, mal_id, title, title_english, title_japanese, type, episodes, status, airing, aired, rating, duration, season, year, studios, producers, synopsis):
         self.mal_id = mal_id
@@ -16,6 +19,7 @@ class Anime:
         self.studios = studios
         self.producers = producers
         self.synopsis = synopsis
+        self.added_to = '@none'
 
     @classmethod
     def from_tuple(cls, data_tuple):
@@ -63,25 +67,36 @@ class Anime:
             self.mal_id, self.title, self.title_english, self.title_japanese, self.type, self.episodes, self.status,
             self.airing, self.aired, self.rating, self.duration, self.season,
             self.year, self.studios, self.producers, self.synopsis
-        )    
-    
+        )  
+
+    def addTo(self, plataform):
+        # Verifica se começa com @, contém apenas letras minúsculas após @, e não tem espaços em branco
+        if re.match(r'^@[a-z0-9_]+$', plataform):
+            self.added_to += plataform
+        else:
+            raise ValueError("Plataform string must start with '@', contain only lowercase letters, and no spaces or multiple '@' characters.")
+
     def __str__(self):
-        return (f"MAL ID: {self.mal_id}\n"
-                f"Title: {self.title}\n"
-                f"English Title: {self.title_english}\n"
-                f"Japanese Title: {self.title_japanese}\n"
-                f"Type: {self.type}\n"
-                f"Episodes: {self.episodes}\n"
-                f"Status: {self.status}\n"
-                f"Airing: {self.airing}\n"
-                f"Aired: {self.aired}\n"
-                f"Rating: {self.rating}\n"
-                f"Duration: {self.duration}\n"
-                f"Season: {self.season}\n"
-                f"Year: {self.year}\n"
-                f"Studios: {self.studios}\n"
-                f"Producers: {self.producers}\n"
-                f"Synopsis: {self.synopsis}\n")
+        return (f"Anime(\n"
+            f"    MAL ID: {self.mal_id}\n"
+            f"    Title: {self.title}\n"
+            f"    English Title: {self.title_english}\n"
+            f"    Japanese Title: {self.title_japanese}\n"
+            f"    Type: {self.type}\n"
+            f"    Episodes: {self.episodes}\n"
+            f"    Status: {self.status}\n"
+            f"    Airing: {self.airing}\n"
+            f"    Aired: {self.aired}\n"
+            f"    Rating: {self.rating}\n"
+            f"    Duration: {self.duration}\n"
+            f"    Season: {self.season}\n"
+            f"    Year: {self.year}\n"
+            f"    Studios: {self.studios}\n"
+            f"    Producers: {self.producers}\n"
+            f"    Synopsis: {self.synopsis}\n"
+            f"    AddedTo: {self.added_to}"
+            f")"
+        )
     
 class Episode:
     def __init__(self, mal_id, episode_number, watch_link, download_link_hd, download_link_sd, temp=False):
@@ -91,14 +106,32 @@ class Episode:
         self.download_link_hd = download_link_hd
         self.download_link_sd = download_link_sd
         self.temp = temp
+        self.added_to = '@none'
 
     def to_tuple(self):
         return (
             self.mal_id, self.episode_number, self.watch_link, self.download_link_hd, self.download_link_sd, self.temp
         )
     
+    def addTo(self, plataform):
+        # Verifica se começa com @, contém apenas letras minúsculas após @, e não tem espaços em branco
+        if re.match(r'^@[a-z0-9_]+$', plataform):
+            self.added_to += plataform
+        else:
+            raise ValueError("Plataform string must start with '@', contain only lowercase letters, and no spaces or multiple '@' characters.")
+
     def __repr__(self):
-        return f"Episode(mal_id={self.mal_id}, episode_number={self.episode_number}, watch_link={self.watch_link}, download_link_hd={self.download_link_hd}, download_link_sd={self.download_link_sd}, temp={self.temp})"
+        return (
+            f"Episode(\n"
+            f"    mal_id={self.mal_id},\n"
+            f"    episode_number={self.episode_number},\n"
+            f"    watch_link={self.watch_link},\n"
+            f"    download_link_hd={self.download_link_hd},\n"
+            f"    download_link_sd={self.download_link_sd},\n"
+            f"    temp={self.temp},\n"
+            f"    added_to{self.added_to},\n"
+            f")"
+        )
 
     @classmethod
     def from_tuple(cls, data):
