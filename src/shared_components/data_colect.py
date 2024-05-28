@@ -59,7 +59,7 @@ def get_title_and_hyperlinks_from_af(url_af=values.URL_AF_RELEASES, headers=valu
     return results
 
 
-def get_episodes_watch_links_from_af(url, mal_id, print_log=False):
+def get_episodes_watch_links_from_af(url: str, mal_id: int, print_log=False):
     '''
     Get all the episodes watch links in Anime Fire from an all-episodes Anime Fire URL.
 
@@ -77,7 +77,7 @@ def get_episodes_watch_links_from_af(url, mal_id, print_log=False):
     if print_log:
         print(f'Base URL: {url}')
 
-    results = []
+    results: list[dict] = []
     try:
         base_url = url.split("-todos-os-episodios")[0]  # Remove a parte '-todos-os-episodios' da URL
 
@@ -109,7 +109,7 @@ def get_episodes_watch_links_from_af(url, mal_id, print_log=False):
 
     return results
 
-def get_episodes_download_links_from_af(anime_name, mal_id, url=values.URL_AF_DOWNLOADS, print_log=False):
+def get_episodes_download_links_from_af(anime_name: str, mal_id: int, url=values.URL_AF_DOWNLOADS, print_log=False):
     '''
     Get all the episodes download links in Anime Fire from an anime name.
 
@@ -122,7 +122,7 @@ def get_episodes_download_links_from_af(anime_name, mal_id, url=values.URL_AF_DO
     Returns:
     - List of dictionaries containing episode number, download links for SD and HD versions, a boolean indicating if the episode is temporary, and MAL ID of the anime.
     '''
-    results = []
+    results: list[dict] = []
     base_url = f"{url}{anime_name}/"
     if print_log:
         print(f'Base URL: {base_url}')
@@ -164,7 +164,7 @@ def get_episodes_download_links_from_af(anime_name, mal_id, url=values.URL_AF_DO
 
     return results
 
-def get_anime_name_from_af_url(af_link, print_log = False):
+def get_anime_name_from_af_url(af_link: str, print_log = False):
     '''
     Extract the anime name from an Anime Fire link.
 
@@ -226,46 +226,55 @@ def get_anime_resource_from_jikan_v4(anime_id: int, print_log=False):
     - print_log: Boolean indicating whether to print log messages.
 
     Returns:
-    - Dictionaries containing the anime data
+    - Dictionary containing the anime data
     '''
     if anime_id == values.BAD_ID:
         return None
 
     search_url = f"{values.URL_JIKAN_SEARCH_BY_MALID}{anime_id}"
     response = requests.get(search_url)
-    data = response.json()
+    
+    try:
+        data = response.json()
+    except ValueError:
+        print("Error decoding JSON response")
+        return None
 
     if 'data' in data:
         anime_data = data['data']
+        if isinstance(anime_data, dict):  # Verifica se anime_data é um dicionário
 
-        anime_dict = {
-            'mal_id': anime_id,
-            'title': anime_data.get('title', 'N/A'),
-            'title_english': anime_data.get('title_english', 'N/A'),
-            'title_japanese': anime_data.get('title_japanese', 'N/A'),
-            'type': anime_data.get('type', 'N/A'),
-            'episodes': anime_data.get('episodes', 'N/A'),
-            'status': anime_data.get('status', 'N/A'),
-            'airing': anime_data.get('airing', 'N/A'),
-            'aired': anime_data.get('aired', {}).get('string', 'N/A'),
-            'rating': anime_data.get('rating', 'N/A'),
-            'duration': anime_data.get('duration', 'N/A'),
-            'season': anime_data.get('season', 'N/A'),
-            'year': anime_data.get('year', 'N/A'),
-            'studios': ', '.join([studio['name'] for studio in anime_data.get('studios', [])]),
-            'producers': ', '.join([producer['name'] for producer in anime_data.get('producers', [])]),
-            'synopsis': anime_data.get('synopsis', 'N/A')
-        }
+            anime_dict = {
+                'mal_id': anime_id,
+                'title': anime_data.get('title', 'N/A'),
+                'title_english': anime_data.get('title_english', 'N/A'),
+                'title_japanese': anime_data.get('title_japanese', 'N/A'),
+                'type': anime_data.get('type', 'N/A'),
+                'episodes': anime_data.get('episodes', 'N/A'),
+                'status': anime_data.get('status', 'N/A'),
+                'airing': anime_data.get('airing', 'N/A'),
+                'aired': anime_data.get('aired', {}).get('string', 'N/A'),
+                'rating': anime_data.get('rating', 'N/A'),
+                'duration': anime_data.get('duration', 'N/A'),
+                'season': anime_data.get('season', 'N/A'),
+                'year': anime_data.get('year', 'N/A'),
+                'studios': ', '.join([studio['name'] for studio in anime_data.get('studios', [])]),
+                'producers': ', '.join([producer['name'] for producer in anime_data.get('producers', [])]),
+                'synopsis': anime_data.get('synopsis', 'N/A')
+            }
 
-        if print_log:
-            print(anime_dict)
+            if print_log:
+                print(anime_dict)
 
-        return anime_dict
+            return anime_dict
+        else:
+            print("Expected a dictionary for anime_data, got:", type(anime_data))
+            return None
     else:
         print("Anime not found.")
         return None
-
-def data_extract(url_af=values.URL_AF_RELEASES, haders=values.HEADERS, extract_amount = 10, start_page = 1, print_log=False):
+    
+def extract_releasing_animes_from_af(url_af=values.URL_AF_RELEASES, haders=values.HEADERS, extract_amount = 10, start_page = 1, print_log=False):
     '''
     Collect wacth and download links from Anime Fire and anime metadatas from MyAnimeList
 
@@ -335,5 +344,31 @@ def data_extract(url_af=values.URL_AF_RELEASES, haders=values.HEADERS, extract_a
         if data:
             animes_metadata.append(data)
     return watch_links, download_links, animes_metadata
+
+
+def extract_custom_anime_from_af(anime_url_on_af: str, print_log= False):
+    """
+    Extrct a single anime from Anime Fire.
+
+    Args:
+     - anime_url_on_af: URL to the anime overview page on Anime Fire following the format: 
+                        https://animefire.plus/animes/anime-name-todos-os-episodios.
+     - print_log: Enable logging for debugging purposes.
+
+    Returns:
+     - A tuple of: watch_links, download_links, anime_metadata_from_mal
+    """
+    anime_name_romaji = anime_url_on_af.split('/')[-1].rstrip("-todos-os-episodios")
+    anime_mal_id: int = search_anime_id_on_jikan_v4(anime_name=anime_name_romaji, print_log=print_log)
+    if(anime_mal_id == values.BAD_ID):
+        raise ValueError('Anime not found')
+    anime_data = get_anime_resource_from_jikan_v4(anime_id=anime_mal_id, print_log=print_log)
+    download_links = get_episodes_download_links_from_af(anime_name=anime_name_romaji, mal_id=anime_mal_id, print_log=print_log)
+    watch_links = get_episodes_watch_links_from_af(url=anime_url_on_af, mal_id=anime_mal_id, print_log=print_log)
+    return watch_links, download_links, anime_data
+
+
+
+
 
     

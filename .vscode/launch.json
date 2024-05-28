@@ -5,7 +5,7 @@
             "name": "Python: Select Argument and Run",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/main.py",
+            "program": "${workspaceFolder}/src/main.py",
             "console": "integratedTerminal",
             "args": ["${input:selectMode}"]
         }
