@@ -5,6 +5,8 @@ from shared_components.api.bot_api.sensitive import token
 from shared_components.api.bot_api.animestele_bot import Telena
 import urllib.parse
 
+from shared_components.queue import Queue
+
 async def main(mode):
     if mode == 'local_windows_run':
         await local_windows_run()
@@ -60,6 +62,14 @@ async def server_debug():
 
 async def local_linux_run():
     print("Running in local Linux mode...")
+    path='data/queue.txt'
+    queue = Queue(path)
+    print(queue.lines)
+    last = queue.dequeue()
+    print(last)
+    print(queue.lines)
+    queue.queue('*')
+    queue.queue('$')
 
 async def local_linux_debug():
     print("Debugging in local Linux mode...")
