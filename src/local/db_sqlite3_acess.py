@@ -1,10 +1,10 @@
-from local.db_sqlite3 import Database
+from local.db_sqlite3 import SqliteDB
 from shared_components import data_colect
 from shared_components.db_structs import Anime, Episode
 from shared_components import values
 
 def _insert_animes_into_database(watch_links: list[list[dict]], download_links: list[list[dict]], animes_metadata: list[dict], database_path, print_log=False):
-    db = Database(database_path)
+    db = SqliteDB(database_path)
     animes: list[Anime] = []
     episodes: list[Episode] = []
     # Inserir animes
@@ -91,8 +91,8 @@ def extract_releasing_animes_from_af_and_insert_into_database(extract_amount = 1
     '''
     watch_links, download_links, animes_metadata = data_colect.extract_releasing_animes_from_af(extract_amount=extract_amount, start_page=start_page, print_log=print_log)
     # Conectar ao banco de dados SQLite
-    _insert_animes_into_database(watch_links=watch_links, download_links=download_links, animes_metadata=animes_metadata, database_path=database_path, print_log=print_log)
-    
+    animes, episodes = _insert_animes_into_database(watch_links=watch_links, download_links=download_links, animes_metadata=animes_metadata, database_path=database_path, print_log=print_log)
+    return animes, episodes
     
 
 def insert_custom_anime_from_af_into_database(url_af: str, database_path=values.DATABASE_PATH,print_log=False):
@@ -106,7 +106,7 @@ def insert_custom_anime_from_af_into_database(url_af: str, database_path=values.
      - print_log: Boolean indicating whether to print log messages.
 
     Returns:
-     - None.
+     - A anime and this anime episodes.
     '''
     watch_links, download_links, anime_data = data_colect.extract_custom_anime_from_af(anime_url_on_af=url_af, print_log=print_log)
     animes, episodes = _insert_animes_into_database(
@@ -129,7 +129,7 @@ def get_anime_from_database(mal_id: int, database_path=values.DATABASE_PATH):
      Return:
       - Anime data and a list o Episodes data.
     '''
-    db = Database(database_path)
+    db = SqliteDB(database_path)
     anime: Anime = db.get_anime_by_mal_id(mal_id=mal_id)
     episodes: list[Episode] = db.get_episodes_by_mal_id(mal_id=mal_id)
     db.close()
@@ -139,7 +139,7 @@ def update_anime_added_to(anime: Anime,  database_path=values.DATABASE_PATH):
     '''
     Acess the method update_anime_added_to from class Database
     '''
-    db = Database(database_path)
+    db = SqliteDB(database_path)
     db.update_anime_added_to(anime=anime)
     db.close()
 
@@ -147,7 +147,7 @@ def update_episode_added_to(episode: Episode,  database_path=values.DATABASE_PAT
     '''
     Acess the method update_episode_added_to from class Database
     '''
-    db = Database(database_path)
+    db = SqliteDB(database_path)
     db.update_episode_added_to(episode=episode)
     db.close()
 
@@ -164,7 +164,7 @@ def data_print(database_path=values.DATABASE_PATH, num_animes=10, num_episodes=1
     Return:
      - None.
     '''
-    db = Database(database_path)
+    db = SqliteDB(database_path)
     print("\n>>>>>> ANIMES <<<<<<\n")
     anime_list = db.get_animes_list(num_animes=num_animes, return_all=return_all)
     i = 1

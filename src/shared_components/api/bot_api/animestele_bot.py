@@ -1,12 +1,15 @@
+import asyncio
 import datetime
-from telegram import Bot, KeyboardButton, ReplyKeyboardMarkup, Message
-from local.db_sqlite3 import Database
+import httpx
+from telegram import Bot, InputMediaVideo, KeyboardButton, ReplyKeyboardMarkup, Message
+from telegram.error import TimedOut
 from shared_components import values
 from local import db_sqlite3_acess 
+from shared_components.api.bot_api.sensitive import token
 
 class Telena:
 
-    def __init__(self, token):
+    def __init__(self, token=token.TOKEN_TELENA):
         self.token = token
         self.bot = Bot(token=token)
 
@@ -35,10 +38,38 @@ class Telena:
     def search_message(self, chat_id, query):
         messages = self.bot.search_messages(chat_id, query)
         return messages
-        
-    def upload_video(self, chat_id, http_url, caption):
-        response = self.bot.send_document(chat_id=chat_id, video=http_url, caption=caption)
-        return response
+    
+    async def fetch_url(self, url):
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+            response.raise_for_status()  # Isso vai lançar um erro se o status não for 200-399
+            return response
+            
+    async def upload_video(self, chat_id, http_url, print_log=False):
+        try:
+            if(print_log):
+               print(f"Checking http url:\n{http_url}\n...")
+            await self.fetch_url(http_url)
+            
+            if print_log:
+                print("Trying to send video...")
+            response = await self.bot.send_video(chat_id=chat_id, video=http_url)
+            return response
+        except (httpx.HTTPStatusError, httpx.RequestError) as e:
+            print(f"HTTP error occurred: {e}")
+        except (httpx.ReadTimeout, asyncio.exceptions.CancelledError) as e:
+            print(f"Timeout error occurred: {e}. Retrying...")
+            await asyncio.sleep(3)  # Espera antes de tentar novamente
+            try:
+                await self.fetch_url(http_url)
+                response = await self.bot.send_video(chat_id=chat_id, video=http_url)
+                return response
+            except Exception as e:
+                print(f"Failed again: {e}")
+                raise
+        except Exception as e:
+            print(f"Unhandled exception: {e}")
+            raise
 
     def write_coments_view_message(self, chat_id, msg_test):
         keyboard = ReplyKeyboardMarkup([[KeyboardButton('Ver comentários')]])
@@ -61,41 +92,76 @@ class Telena:
         except Exception as e:
             print(f"Erro ao modificar imagem de perfil do canal: {e}")
 
-    async def add_anime_to_telegram(self, chat_id, mal_id: int, database_path=values.DATABASE_PATH):
-        anime, episodes = db_sqlite3_acess.get_anime_from_database(mal_id=mal_id, database_path=database_path)
-        # Verificar se o anime ainda não foi adicionado ao Telegram
-        if '@none' in anime.added_to:
-            # Formatar mensagem com os campos do anime
-            anime_message = (
-                f"Anime ID: {anime.mal_id}\n"
-                f"Title: {anime.title}\n"
-                f"English Title: {anime.title_english}\n"
-                f"Japanese Title: {anime.title_japanese}\n"
-                f"Type: {anime.type}\n"
-                f"Episodes: {anime.episodes}\n"
-                f"Status: {anime.status}\n"
-                f"Airing: {anime.airing}\n"
-                f"Aired: {anime.aired}\n"
-                f"Rating: {anime.rating}\n"
-                f"Duration: {anime.duration}\n"
-                f"Season: {anime.season}\n"
-                f"Year: {anime.year}\n"
-                f"Studios: {anime.studios}\n"
-                f"Producers: {anime.producers}\n"
-                f"Synopsis: {anime.synopsis}\n"
+    async def edit_message(self, chat_id, message_id, new_text):
+        try:
+            await self.bot.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=new_text
             )
+            print(f"Message {message_id} in chat {chat_id} was successfully edited.")
+        except Exception as e:
+            print(f"Error editing message {message_id} in chat {chat_id}: {e}")
+
+
+    async def add_anime_to_telegram(self, chat_id, mal_id: int, database_path=values.DATABASE_PATH, print_log=False):
+        try:
+            if print_log:
+                print(f"Trying to send anime {mal_id} to telegram channel {chat_id}")
+            anime, episodes = db_sqlite3_acess.get_anime_from_database(mal_id=mal_id, database_path=database_path)
             
-            # Enviar mensagem com os campos do anime para o canal
-            returned_anime_message: Message = await self.write_message(chat_id=chat_id, msg_text=anime_message)           
-            # Atualizar o campo added_to no banco de dados com o ID da mensagem do Telegram
-            anime.added_to = f"@telegram={returned_anime_message.id}"
-            db_sqlite3_acess.update_anime_added_to(anime)
+            # Verify if anime is not in telegram yet
+            if '#telegram' not in anime.added_to:
+                # Formatar mensagem com os campos do anime
+                anime_message = (
+                    f"Anime ID: {anime.mal_id}\n"
+                    f"Title: {anime.title}\n"
+                    f"English Title: {anime.title_english}\n"
+                    f"Japanese Title: {anime.title_japanese}\n"
+                    f"Type: {anime.type}\n"
+                    f"Episodes: {anime.episodes}\n"
+                    f"Status: {anime.status}\n"
+                    f"Airing: {anime.airing}\n"
+                    f"Aired: {anime.aired}\n"
+                    f"Rating: {anime.rating}\n"
+                    f"Duration: {anime.duration}\n"
+                    f"Season: {anime.season}\n"
+                    f"Year: {anime.year}\n"
+                    f"Studios: {anime.studios}\n"
+                    f"Producers: {anime.producers}\n"
+                    f"Synopsis: {anime.synopsis}\n"
+                )
+                
+                try:
+                    # send message
+                    returned_anime_message: Message = await self.write_message(chat_id=chat_id, msg_text=anime_message)
+                    # if message sent susscefully, update channel
+                    new_channel = f'#telegram={chat_id}'
+                    if anime.channel == '#none':
+                        anime.channel = new_channel
+                    else:
+                        anime.channel = f"{anime.channel},{new_channel}"           
+                    new_added_to = f"#telegram={returned_anime_message.message_id}"
+                    #  update added_to
+                    if anime.added_to == "#none":
+                        anime.added_to = new_added_to
+                    else:
+                        anime.added_to = f"{anime.added_to},{new_added_to}"
+                    # save into database    
+                    db_sqlite3_acess.update_anime_added_to(anime)
+                    if print_log:
+                        print(anime)
+                except Exception as e:
+                    print(f"Failed to send anime message: {e}")
+                    return None
+                
+            else:
+                if print_log:
+                    print(f"Anime \"{anime.title}\" already in telegram at channel: {anime.channel} and message: {anime.added_to}.")
             
-            return returned_anime_message
-        else:
-            # Se o anime já estiver adicionado ao Telegram, tentar adicionar os episódios
             for episode in episodes:
-                if '@none' in episode.added_to:
+                # Se o anime já estiver adicionado ao Telegram, tentar adicionar os episódios
+                if '#telegram' not in episode.added_to:
                     # Formatar mensagem com os campos do episódio
                     episode_message = (
                         f"Episode ID: {episode.episode_id}\n"
@@ -106,19 +172,31 @@ class Telena:
                         f"Download Link HD: {episode.download_link_hd}\n"
                         f"Download Link SD: {episode.download_link_sd}\n"
                         f"Release Date: {episode.release_date}\n"
-                        f"Temp: {episode.temp}"
-                        f"Added to: {episode.added_to}"
+                        f"Temp: {episode.temp}\n"
+                        f"Added to: {episode.added_to}\n"
                     )
                     
-                    # Enviar mensagem com os campos do episódio para o canal
-                    returned_episode_message: Message = await self.write_message(chat_id, episode_message)
+                    try:
+                        # Enviar mensagem com os campos do episódio para o canal
+                        returned_episode_message: Message = await self.write_message(chat_id, episode_message)
+                        
+                        # Atualizar o campo added_to no banco de dados com o ID da mensagem do Telegram
+                        new_added_to = f"#telegram={returned_episode_message.message_id}"
+                        if episode.added_to == "#none":
+                            episode.added_to = new_added_to
+                        else:
+                            episode.added_to = f"{episode.added_to},{new_added_to}"
+                        db_sqlite3_acess.update_episode_added_to(episode)
+                        if print_log:
+                            print(episode)
+                    except Exception as e:
+                        print(f"Failed to send episode message: {e}")
+                        return None
                     
-                    # Atualizar o campo added_to no banco de dados com o ID da mensagem do Telegram
-                    new_added_to = f"@telegram={returned_episode_message.id}"
-                    if anime.added_to == "@none":
-                        anime.added_to = new_added_to
-                    else:
-                        anime.added_to = f"{anime.added_to},{new_added_to}"
-                    db_sqlite3_acess.update_episode_added_to(episode)
-            
+                else:
+                    if print_log:
+                        print(f"Episode {episode.episode_number} already in telegram at message: {episode.added_to}")
+                    
+        except Exception as e:
+            print(f"An error occurred: {e}")
             return None

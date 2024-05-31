@@ -3,7 +3,7 @@ from psycopg2 import sql
 from typing import List, Optional
 from shared_components.db_structs import Anime, Episode
 
-class Database:
+class PostgreDB:
     def __init__(self, connection_params):
         self.connection_params = connection_params
         self.conn = psycopg2.connect(**connection_params)

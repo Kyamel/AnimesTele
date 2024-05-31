@@ -2,7 +2,7 @@ import sqlite3
 from typing import List, Optional
 from shared_components.db_structs import Anime, Episode
 
-class Database:
+class SqliteDB:
     def __init__(self, path):
         self.path = path
         self.conn = sqlite3.connect(path)
@@ -10,7 +10,7 @@ class Database:
         self.create_tables()
 
     def create_tables(self):
-        # Criar tabela de animes
+        # 1. A simple animes table
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS animes (
                 anime_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,22 +30,21 @@ class Database:
                 studios TEXT,
                 producers TEXT,
                 synopsis TEXT,
-                added_to TEXT
+                creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-        # Criar tabela de episódios
+        # 2. Table to relate episodes to an anime
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS episodes (
                 episode_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                anime_id INTEGER NOT NULL REFERENCES animes(anime_id),
-                mal_id INTEGER NOT NULL REFERENCES animes(mal_id),
+                anime_id INTEGER NOT NULL REFERENCES animes(anime_id) ON DELETE CASCADE ON UPDATE CASCADE,
+                mal_id INTEGER NOT NULL REFERENCES animes(mal_id) ON DELETE CASCADE ON UPDATE CASCADE,
                 episode_number INTEGER NOT NULL,
                 watch_link TEXT NOT NULL,
                 download_link_hd TEXT NOT NULL,
                 download_link_sd TEXT NOT NULL,
-                release_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Adiciona o campo release_date com valor padrão da hora atual
-                temp INTEGER DEFAULT 0, -- Adiciona o campo temp como inteiro com valor padrão 0 (FALSE)
-                added_to TEXT,
+                creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                temp INTEGER DEFAULT 0,
                 UNIQUE (mal_id, episode_number),
                 UNIQUE (anime_id, episode_number),
                 UNIQUE (watch_link),
@@ -53,31 +52,151 @@ class Database:
                 UNIQUE (download_link_sd)
             )
         ''')
+        # 3. Table to store platforms
+        self.cursor.execute('''
+            -- Table to store platforms
+            CREATE TABLE IF NOT EXISTS platforms (
+                platform_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                platform_name TEXT UNIQUE NOT NULL,
+                creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        ''')
+        # 4. Table to relate channels to a platform
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS channels (
+                channel_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                platform_id INTEGER NOT NULL,
+                chat_name TEXT,
+                chat_id INTEGER,
+                chat_description TEXT,
+                creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (platform, chat_name),
+                UNIQUE (platform, chat_id),
+                CHECK (
+                    (chat_name IS NULL AND chat_id IS NOT NULL) OR
+                    (chat_name IS NOT NULL AND chat_id IS NULL) OR
+                    (chat_name IS NOT NULL AND chat_id IS NOT NULL)            
+                ),
+                FOREIGN KEY (platform_id) REFERENCES platforms(platform_id) ON DELETE CASCADE ON UPDATE CASCADE
+            );
+        ''')
+        # 5. Table to recover messages related to an anime from a channel in a platform
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS msgs_an (
+                msg_an_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                anime_id INTEGER NOT NULL,
+                message_id INTEGER NOT NULL,
+                channel_id INTEGER NOT NULL,
+                creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (anime_id, channel_id),
+                FOREIGN KEY (anime_id) REFERENCES animes(anime_id) ON DELETE CASCADE ON UPDATE CASCADE,
+                FOREIGN KEY (channel_id) REFERENCES channels(channel_id) ON DELETE CASCADE ON UPDATE CASCADE
+            );
+        ''')
+        # 6. Table to recover messages related to an episode from a channel in a platform
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS msgs_ep (
+                msg_ep_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                episode_id INTEGER NOT NULL,
+                message_id INTEGER NOT NULL,
+                channel_id INTEGER NOT NULL,
+                creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (episode_id, channel_id),
+                FOREIGN KEY (episode_id) REFERENCES episodes(episode_id) ON DELETE CASCADE ON UPDATE CASCADE,
+                FOREIGN KEY (channel_id) REFERENCES channels(channel_id) ON DELETE CASCADE ON UPDATE CASCADE
+            );
+        ''')
+        # 7. Table to recover messages related to general topics from a channel in a platform
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS msgs_ge (
+                msg_ge_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message_id INTEGER NOT NULL,
+                channel_id INTEGER NOT NULL,
+                type INTEGER NOT NULL,
+                description TEXT,
+                creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (channel_id) REFERENCES channels(channel_id) ON DELETE CASCADE ON UPDATE CASCADE
+            );
+        ''')
+        # 8. A simple users table
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        # 9. Table to relate a user to platforms
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_in_platforms (
+                uip_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                platform_id INTEGER NOT NULL,
+                user_id_on_platform INTEGER NOT NULL,
+                creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP.
+                UNIQUE (user_id, platform_id),
+                UNIQUE (user_id_on_platform, platform_id),
+                UNIQUE (user_id_on_platform),
+                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE,
+                FOREIGN KEY (platform_id) REFERENCES platforms(platform_id) ON DELETE CASCADE ON UPDATE CASCADE
+            )
+        ''')
+        # 10. Table to relate a user to channels
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_in_channels (
+                uic_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                channel_id INTEGER NOT NULL,
+                user_name_on_channel TEXT UNIQUE NOT NULL,
+                creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (user_id, channel_id),
+                UNIQUE (user_name_on_channel, channel_id),
+                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE,
+                FOREIGN KEY (channel_id) REFERENCES channels(channel_id) ON DELETE CASCADE ON UPDATE CASCADE
+            )
+        ''')
+        # 11. Table to relate a user to animes
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS notifications (
+                notification_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                anime_id INTEGER,
+                creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (user_id, anime_id),
+                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE,
+                FOREIGN KEY (anime_id) REFERENCES animes(anime_id) ON DELETE CASCADE ON UPDATE CASCADE
+            )
+        ''')
         self.conn.commit()
 
-    def insert_anime(self, anime: Anime):
+
+    def insert_anime(self, anime: Anime, print_log=False):
         """
         Insert a class Anime into the database, all attributes except anime_id are added to the database.
         """
-        try:
-            self.cursor.execute('''
-                INSERT INTO animes (
-                    mal_id, title, title_english, title_japanese, type, episodes, status, airing, aired, rating, 
-                    duration, season, year, studios, producers, synopsis, added_to
-                ) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                anime.mal_id, anime.title, anime.title_english, anime.title_japanese, anime.type, 
-                anime.episodes, anime.status, anime.airing, anime.aired, anime.rating, 
-                anime.duration, anime.season, anime.year, anime.studios, anime.producers, 
-                anime.synopsis, anime.added_to
-            ))
-            self.conn.commit()
-            anime.anime_id = self.cursor.lastrowid
-            return anime.anime_id
-        except sqlite3.IntegrityError as e:
-            print(f"Error inserting anime {anime.title} - {anime.mal_id}: {e}")
-            return None
+        if anime.mal_id == -1 or anime.mal_id == None:
+            try:
+                self.cursor.execute('''
+                    INSERT INTO animes (
+                        mal_id, title, title_english, title_japanese, type, episodes, status, airing, aired, rating, 
+                        duration, season, year, studios, producers, synopsis, channel, added_to
+                    ) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    anime.mal_id, anime.title, anime.title_english, anime.title_japanese, anime.type, 
+                    anime.episodes, anime.status, anime.airing, anime.aired, anime.rating, 
+                    anime.duration, anime.season, anime.year, anime.studios, anime.producers, 
+                    anime.synopsis, anime.channel, anime.added_to
+                ))
+                self.conn.commit()
+                anime.anime_id = self.cursor.lastrowid
+                return anime.anime_id
+            except sqlite3.IntegrityError as e:
+                print(f"Error inserting anime {anime.title} - {anime.mal_id}: {e}")
+                return None
+        else:
+            if print_log:
+                print(f"Invalid anime: mal_id={anime.mal_id}")
 
     def get_anime_mal_id_by_title(self, title: str) -> int:
         self.cursor.execute('SELECT mal_id FROM animes WHERE title = ?', (title,))
@@ -116,6 +235,7 @@ class Database:
                 studios=anime_data['studios'],
                 producers=anime_data['producers'],
                 synopsis=anime_data['synopsis'],
+                channel=anime_data['channel'],
                 added_to=anime_data['added_to']
             )
         raise ValueError("Anime not found")
@@ -126,7 +246,8 @@ class Database:
                                 'episodes, status, airing, aired, rating, duration, season, year, studios, producers, synopsis, added_to FROM animes')
         else:
             self.cursor.execute('SELECT anime_id, mal_id, title, title_english, title_japanese,'
-                                'type, episodes, status, airing, aired, rating, duration, season, year, studios, producers, synopsis, added_to FROM animes ORDER BY mal_id DESC LIMIT ?', (num_animes,))
+                                'type, episodes, status, airing, aired, rating, duration, season, year,'
+                                'studios, producers, synopsis, channel,added_to FROM animes ORDER BY mal_id DESC LIMIT ?', (num_animes,))
         rows = self.cursor.fetchall()
 
         animes: list[Anime] = []
@@ -152,6 +273,7 @@ class Database:
                 studios=anime_data['studios'],
                 producers=anime_data['producers'],
                 synopsis=anime_data['synopsis'],
+                channel=anime_data['channel'],
                 added_to=anime_data['added_to']
             )
             animes.append(anime)
@@ -165,27 +287,49 @@ class Database:
         try:
             self.cursor.execute('''
                 UPDATE animes 
-                SET added_to = ?
+                SET added_to = ?, channel = ?
                 WHERE anime_id = ?
-            ''', (anime.added_to, anime.anime_id))
+            ''', (anime.added_to, anime.channel, anime.anime_id))
+            self.conn.commit() 
         except sqlite3.Error as e:
             print(f"Error updating added_to for anime {anime.title} - {anime.mal_id}: {e}")
             self.conn.rollback()
 
-    def insert_episode(self, episode: Episode):
+    def get_anime_id_by_mal_id(self, mal_id: int) -> int:
         try:
             self.cursor.execute('''
-                INSERT INTO episodes (anime_id, mal_id, episode_number, watch_link, download_link_hd, download_link_sd, added_to) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                episode.anime_id, episode.mal_id, episode.episode_number, episode.watch_link, episode.download_link_hd, episode.download_link_sd, episode.added_to
-            ))
-            self.conn.commit()
-            episode.episode_id = self.cursor.lastrowid 
-            return episode.episode_id
-        except sqlite3.IntegrityError as e:
-            print(f"Error inserting episode for anime {episode.mal_id} - Episode {episode.episode_number}: {e}")
+                SELECT anime_id
+                FROM animes
+                WHERE mal_id = ?
+            ''', (mal_id,))
+            result = self.cursor.fetchone()
+            if result:
+                return result[0]
+            else:
+                return None
+        except sqlite3.Error as e:
+            print(f"Error retrieving anime_id for mal_id {mal_id}: {e}")
             return None
+
+    def insert_episode(self, episode: Episode, print_log=False):
+        if episode.anime_id == -1 or episode.anime_id == None or episode.mal_id == -1 or episode.mal_id == None:
+            try:
+                self.cursor.execute('''
+                    INSERT INTO episodes (anime_id, mal_id, episode_number, watch_link, download_link_hd, download_link_sd, added_to) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    episode.anime_id, episode.mal_id, episode.episode_number, episode.watch_link, episode.download_link_hd, episode.download_link_sd, episode.added_to
+                ))
+                self.conn.commit()
+                episode.episode_id = self.cursor.lastrowid 
+                return episode.episode_id
+            except sqlite3.IntegrityError as e:
+                print(f"Error inserting episode for anime {episode.mal_id} - Episode {episode.episode_number}: {e}")
+                self.conn.rollback()
+                return None
+        else:
+            if print_log:
+                print(f"Invalid episode: anime_id={episode.anime_id}, mal_id={episode.mal_id}")
 
     def get_episodes_by_mal_id(self, mal_id: int):
         self.cursor.execute('SELECT * FROM episodes WHERE mal_id = ?', (mal_id,))
@@ -333,31 +477,6 @@ class Database:
         except sqlite3.Error as e:
             print(f"Error updating added_to for episode {episode.episode_id} - {episode.mal_id}: {e}")
             self.conn.rollback()
-
-    def get_anime_id_by_mal_id(self, mal_id: int) -> int:
-        """
-        Retorna o anime_id correspondente a um dado mal_id.
-
-        Args:
-            mal_id (int): O ID do MyAnimeList (MAL).
-
-        Returns:
-            int: O ID do anime no banco de dados.
-        """
-        try:
-            self.cursor.execute('''
-                SELECT anime_id
-                FROM animes
-                WHERE mal_id = ?
-            ''', (mal_id,))
-            result = self.cursor.fetchone()
-            if result:
-                return result[0]
-            else:
-                return None
-        except sqlite3.Error as e:
-            print(f"Error retrieving anime_id for mal_id {mal_id}: {e}")
-            return None
 
     def close(self):
         self.conn.close()

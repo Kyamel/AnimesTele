@@ -1,7 +1,9 @@
 import re
 
 class Anime:
-    def __init__(self, mal_id, title, title_english, title_japanese, type, episodes, status, airing, aired, rating, duration, season, year, studios, producers, synopsis, added_to='@none', anime_id=-1):
+    def __init__(self, mal_id, title, title_english, title_japanese, type,
+                  episodes, status, airing, aired, rating, duration, season,
+                    year, studios, producers, synopsis, channel='#none', added_to='#none', anime_id=-1):
         self.anime_id = anime_id
         self.mal_id = mal_id
         self.title = title
@@ -19,10 +21,14 @@ class Anime:
         self.studios = studios
         self.producers = producers
         self.synopsis = synopsis
+        self.channel = channel
         self.added_to = added_to
 
     @classmethod
     def from_tuple(cls, data_tuple):
+        """
+        Consider using the from_dict method instead.
+        """
         return cls(
             anime_id=data_tuple[0],
             mal_id=data_tuple[1],
@@ -41,7 +47,8 @@ class Anime:
             studios=data_tuple[14],
             producers=data_tuple[15],
             synopsis=data_tuple[16],
-            added_to=data_tuple[17] if len(data_tuple) > 17 else '@none'
+            channel=data_tuple[17] if len(data_tuple) > 17 else '#none',
+            added_to=data_tuple[18] if len(data_tuple) > 18 else '#none'
         )
 
     @classmethod
@@ -64,21 +71,25 @@ class Anime:
             studios=data.get('studios'),
             producers=data.get('producers'),
             synopsis=data.get('synopsis'),
-            added_to=data.get('added_to', '@none')
+            channel=data.get('channel', '#none'),
+            added_to=data.get('added_to', '#none'),
         )
 
     def to_tuple(self, include_anime_id=True):
+        """
+        Consider using the to_dict method instead.
+        """
         if include_anime_id:
             return (
                 self.anime_id, self.mal_id, self.title, self.title_english, self.title_japanese, self.type, self.episodes, self.status,
                 self.airing, self.aired, self.rating, self.duration, self.season,
-                self.year, self.studios, self.producers, self.synopsis, self.added_to
+                self.year, self.studios, self.producers, self.synopsis, self.channel, self.added_to
             )
         else:
             return (
                 self.mal_id, self.title, self.title_english, self.title_japanese, self.type, self.episodes, self.status,
                 self.airing, self.aired, self.rating, self.duration, self.season,
-                self.year, self.studios, self.producers, self.synopsis, self.added_to
+                self.year, self.studios, self.producers, self.synopsis, self.channel, self.added_to
             )
 
     def to_dict(self):
@@ -100,15 +111,16 @@ class Anime:
             'studios': self.studios,
             'producers': self.producers,
             'synopsis': self.synopsis,
+            'channel': self.channel,
             'added_to': self.added_to
         }  
 
     def add_to(self, platform):
-        if re.match(r'^(@[a-zA-Z0-9_=]+)+$', platform):
+        if re.match(r'^(#[a-zA-Z0-9_=@]+)+$', platform):
             if platform not in self.added_to.split():
                 self.added_to += f' {platform}'
         else:
-            raise ValueError("Platform string must start with '@', contain only lowercase letters, numbers, underscores, and no spaces or multiple '@' characters.")
+            raise ValueError("Platform string must start with '#', contain only lowercase letters, numbers, underscores, and no spaces or multiple '@' characters.")
 
     def __str__(self):
         return (f"Anime(\n"
@@ -129,11 +141,14 @@ class Anime:
                 f"    studios: {self.studios}\n"
                 f"    producers: {self.producers}\n"
                 f"    synopsis: {self.synopsis}\n"
+                f"    channel: {self.channel}\n"
+                f"    added_to: {self.added_to}\n"
                 f")"
                 )
    
 class Episode:
-    def __init__(self, mal_id, episode_number, watch_link, download_link_hd, download_link_sd, anime_id=-1, episode_id=-1, release_date=-1, temp=False, added_to='@none'):
+    def __init__(self, mal_id, episode_number, watch_link, download_link_hd,
+                  download_link_sd, anime_id=-1, episode_id=-1, release_date=-1, temp=False, added_to='#none'):
         self.anime_id = anime_id
         self.episode_id = episode_id
         self.mal_id = mal_id
@@ -157,7 +172,7 @@ class Episode:
             download_link_sd=data.get('download_link_sd'),
             release_date=data.get('release_date', -1),
             temp=data.get('temp', False),  # Se não houver valor para temp, define como False por padrão
-            added_to=data.get('added_to', '@none')
+            added_to=data.get('added_to', '#none')
         )
 
     def to_tuple(self, include_episode_id=True):
@@ -186,18 +201,18 @@ class Episode:
             'added_to': self.added_to
         }
     
-    def addTo(self, platform):
-        if re.match(r'^(@[a-zA-Z0-9_=]+)+$', platform):
-
-            self.added_to += f' {platform}'
+    def add_to(self, platform):
+        if re.match(r'^(#[a-zA-Z0-9_=@]+)+$', platform):
+            if platform not in self.added_to.split():
+                self.added_to += f' {platform}'
         else:
-            raise ValueError("Platform string must start with '@', contain only lowercase letters, numbers, underscores, equals sign, and no spaces or multiple '@' characters.")
+            raise ValueError("Platform string must start with '#', contain only lowercase letters, numbers, underscores, equals sign, and no spaces or multiple '@' characters.")
 
     def __repr__(self):
         return (
             f"Episode(\n"
             f"    episode_id={self.episode_id},\n"
-            f"    animes_id={self.anime_id},\n"
+            f"    anime_id={self.anime_id},\n"
             f"    mal_id={self.mal_id},\n"
             f"    episode_number={self.episode_number},\n"
             f"    watch_link={self.watch_link},\n"
