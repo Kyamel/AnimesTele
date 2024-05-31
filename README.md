@@ -44,11 +44,12 @@ Contributions are welcome! If you want to contribute to the development of Anime
 
 - Programming Language: Python
 - Web Framework: FastAPI
-- Telegram Bot Framework: python-telegram-bot
 - Database:
   - Server: PostgreSQL
   - Local: SQLite
-- External APIs: Jikan API (for obtaining anime information from MyAnimeList)
+- External APIs: 
+  - Jikan API (for obtaining anime information from MyAnimeList)
+  - Telegram Bot API: python-telegram-bot
 
 ## License
 
