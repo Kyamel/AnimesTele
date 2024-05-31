@@ -850,7 +850,6 @@ class Users:
         else:
             return None
 
-
 class UserInPlatforms:
     def __init__(self, cursor):
         self.cursor = cursor

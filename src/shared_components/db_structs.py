@@ -85,7 +85,7 @@ class Channel:
         return str(self.to_dict())
 
 
-class MessageAnime:
+class MsgAn:
     def __init__(self, anime_id, message_id, channel_id):
         self.anime_id = anime_id
         self.message_id = message_id
@@ -101,8 +101,7 @@ class MessageAnime:
     def __str__(self):
         return str(self.to_dict())
 
-
-class MessageEpisode:
+class MsgEp:
     def __init__(self, episode_id, message_id, channel_id):
         self.episode_id = episode_id
         self.message_id = message_id
@@ -118,8 +117,7 @@ class MessageEpisode:
     def __str__(self):
         return str(self.to_dict())
 
-
-class MessageGeneral:
+class MsgGe:
     def __init__(self, message_id, channel_id, type, description=None):
         self.message_id = message_id
         self.channel_id = channel_id
@@ -136,10 +134,10 @@ class MessageGeneral:
     def __str__(self):
         return str(self.to_dict())
 
-
 class User:
-    def __init__(self, name):
+    def __init__(self, name, general_notification_on=0):
         self.name = name
+        self.general_notification_on = general_notification_on
 
     @classmethod
     def from_dict(cls, data):
@@ -152,11 +150,12 @@ class User:
         return str(self.to_dict())
 
 
-class UserOfPlatform:
-    def __init__(self, user_id, platform_id, user_id_on_platform):
+class UserInPlatform:
+    def __init__(self, user_id, platform_id, user_id_on_platform, platform_notification_on=0):
         self.user_id = user_id
         self.platform_id = platform_id
         self.user_id_on_platform = user_id_on_platform
+        self.platform_notification_on = platform_notification_on
 
     @classmethod
     def from_dict(cls, data):
@@ -169,11 +168,12 @@ class UserOfPlatform:
         return str(self.to_dict())
 
 
-class UserOfChannel:
-    def __init__(self, user_id, channel_id, user_name_on_channel):
+class UserInChannel:
+    def __init__(self, user_id, channel_id, user_name_on_channel, channel_notification_on=0):
         self.user_id = user_id
         self.channel_id = channel_id
         self.user_name_on_channel = user_name_on_channel
+        self.channel_notification_on = channel_notification_on
 
     @classmethod
     def from_dict(cls, data):
@@ -185,11 +185,60 @@ class UserOfChannel:
     def __str__(self):
         return str(self.to_dict())
 
-
-class Notification:
-    def __init__(self, user_id, anime_id):
+class UserAnimeRelationship:
+    def __init__(self, user_id, anime_id, relationship_state):
         self.user_id = user_id
         self.anime_id = anime_id
+        self.relationship_state = relationship_state
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(**data)
+
+    def to_dict(self):
+        return self.__dict__
+
+    def __str__(self):
+        return str(self.to_dict())
+    
+class AnimeRating:
+    def __init__(self, user_id, anime_id, rating=None, favorite=1):
+        self.user_id = user_id
+        self.anime_id = anime_id
+        self.rating = rating
+        self.favorite = favorite
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(**data)
+
+    def to_dict(self):
+        return self.__dict__
+
+    def __str__(self):
+        return str(self.to_dict())
+
+class AnimeNotification:
+    def __init__(self, user_id, anime_id, channel_id=None):
+        self.user_id = user_id
+        self.anime_id = anime_id
+        self.channel_id = channel_id
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(**data)
+
+    def to_dict(self):
+        return self.__dict__
+
+    def __str__(self):
+        return str(self.to_dict())
+
+class WatchList:
+    def __init__(self, user_id, episode_id, watched_status=1):
+        self.user_id = user_id
+        self.episode_id = episode_id
+        self.watched_status = watched_status
 
     @classmethod
     def from_dict(cls, data):
