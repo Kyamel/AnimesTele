@@ -410,44 +410,24 @@ class Animes(TableInterface):
         else:
             return None
         
-    def get_anime_by_mal_id(self, mal_id: int):
+    def get_by_mal_id(self, mal_id: int):
         self.cursor.execute('SELECT * FROM animes WHERE mal_id = ?', (mal_id,))
         row = self.cursor.fetchone()
         if row:
             column_names = [column[0] for column in self.cursor.description]  # Obter os nomes das colunas
             anime_data = dict(zip(column_names, row))  # Mapear nomes das colunas aos dados do anime
-
-            return Anime(
-                anime_id=anime_data['anime_id'],
-                mal_id=anime_data['mal_id'],
-                title=anime_data['title'],
-                title_english=anime_data['title_english'],
-                title_japanese=anime_data['title_japanese'],
-                type=anime_data['type'],
-                episodes=anime_data['episodes'],
-                status=anime_data['status'],
-                airing=anime_data['airing'],
-                aired=anime_data['aired'],
-                rating=anime_data['rating'],
-                duration=anime_data['duration'],
-                season=anime_data['season'],
-                year=anime_data['year'],
-                studios=anime_data['studios'],
-                producers=anime_data['producers'],
-                synopsis=anime_data['synopsis'],
-                channel=anime_data['channel'],
-                added_to=anime_data['added_to']
-            )
-        raise ValueError("Anime not found")
+            return Anime.from_dict(anime_data)
+        
+        return None
     
     def get_animes_list(self, num_animes=1, return_all=False):
         if return_all:
             self.cursor.execute('SELECT anime_id, mal_id, title, title_english, title_japanese, type,'
-                                'episodes, status, airing, aired, rating, duration, season, year, studios, producers, synopsis, added_to FROM animes')
+                                'episodes, status, airing, aired, rating, duration, season, year, studios, producers, synopsis, creation_date FROM animes')
         else:
             self.cursor.execute('SELECT anime_id, mal_id, title, title_english, title_japanese,'
                                 'type, episodes, status, airing, aired, rating, duration, season, year,'
-                                'studios, producers, synopsis, channel,added_to FROM animes ORDER BY mal_id DESC LIMIT ?', (num_animes,))
+                                'studios, producers, synopsis, channel, creation_date FROM animes ORDER BY mal_id DESC LIMIT ?', (num_animes,))
         rows = self.cursor.fetchall()
 
         animes: list[Anime] = []
@@ -455,27 +435,7 @@ class Animes(TableInterface):
             column_names = [column[0] for column in self.cursor.description]  # Obter os nomes das colunas
             anime_data = dict(zip(column_names, row))  # Mapear nomes das colunas aos dados do anime
 
-            anime = Anime(
-                anime_id=anime_data['anime_id'],
-                mal_id=anime_data['mal_id'],
-                title=anime_data['title'],
-                title_english=anime_data['title_english'],
-                title_japanese=anime_data['title_japanese'],
-                type=anime_data['type'],
-                episodes=anime_data['episodes'],
-                status=anime_data['status'],
-                airing=anime_data['airing'],
-                aired=anime_data['aired'],
-                rating=anime_data['rating'],
-                duration=anime_data['duration'],
-                season=anime_data['season'],
-                year=anime_data['year'],
-                studios=anime_data['studios'],
-                producers=anime_data['producers'],
-                synopsis=anime_data['synopsis'],
-                channel=anime_data['channel'],
-                added_to=anime_data['added_to']
-            )
+            anime = Anime.from_dict(anime_data)
             animes.append(anime)
 
         return animes
@@ -496,8 +456,8 @@ class Episodes(TableInterface):
                 watch_link TEXT NOT NULL,
                 download_link_hd TEXT NOT NULL,
                 download_link_sd TEXT NOT NULL,
-                creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 temp INTEGER DEFAULT 0,
+                creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE (mal_id, episode_number),
                 UNIQUE (anime_id, episode_number),
                 UNIQUE (watch_link),
@@ -532,7 +492,7 @@ class Episodes(TableInterface):
         else:
             return None
         
-    def get_episodes_by_mal_id(self, mal_id: int):
+    def get_by_mal_id(self, mal_id: int):
         """
         Get all episodes corresponding to a given MAL ID.
 
@@ -544,7 +504,7 @@ class Episodes(TableInterface):
         """
         self.cursor.execute('''
             SELECT anime_id, episode_id, episode_number, watch_link, download_link_hd,
-                download_link_sd, release_date, temp, added_to
+                download_link_sd, release_date, temp, creation_date
             FROM episodes
             WHERE mal_id = ?
             ORDER BY release_date DESC, episode_number, added_to DESC
@@ -552,24 +512,15 @@ class Episodes(TableInterface):
         
         rows = self.cursor.fetchall()
         if not rows:
-            raise ValueError("No episodes found for the provided MAL ID.")
+            return None
+        
         episodes: List[Episode] = []
         column_names = [column[0] for column in self.cursor.description]  # Obter os nomes das colunas
         for row in rows:
             episode_data = dict(zip(column_names, row))  # Mapear nomes das colunas aos dados do episódio
-            episode = Episode(
-                episode_id=episode_data['episode_id'],
-                anime_id=episode_data['anime_id'],
-                mal_id=mal_id,
-                episode_number=episode_data['episode_number'],
-                watch_link=episode_data['watch_link'],
-                download_link_hd=episode_data['download_link_hd'],
-                download_link_sd=episode_data['download_link_sd'],
-                release_date=episode_data['release_date'],
-                temp=episode_data['temp'],
-                added_to=episode_data['added_to']
-            )
+            episode = Episode.from_dict(episode_data)
             episodes.append(episode)
+
         return episodes
     
     def get_episodes_list(self, num_episodes=1, return_all=False):
@@ -585,18 +536,7 @@ class Episodes(TableInterface):
         column_names = [column[0] for column in self.cursor.description]  # Obter os nomes das colunas
         for row in rows:
             episode_data = dict(zip(column_names, row))  # Mapear nomes das colunas aos dados do episódio
-            episode = Episode(
-                episode_id=episode_data['episode_id'],
-                anime_id=episode_data['anime_id'],
-                mal_id=episode_data['mal_id'],
-                episode_number=episode_data['episode_number'],
-                watch_link=episode_data['watch_link'],
-                download_link_hd=episode_data['download_link_hd'],
-                download_link_sd=episode_data['download_link_sd'],
-                release_date=episode_data['release_date'],
-                temp=episode_data['temp'],
-                added_to=episode_data['added_to']
-            )
+            episode = Episode.from_dict(episode_data)
             episodes.append(episode)
 
         return episodes
@@ -636,8 +576,25 @@ class Platforms(TableInterface):
             return result[0]
         else:
             return None
+        
+    def get_by_id(self, platform_id: int):
+        """
+        Get a platform by its platform_id.
 
+        Args:
+            - platform_id: The ID of the platform.
 
+        Returns:
+            - The Platform object corresponding to the platform_id, or None if not found.
+        """
+        self.cursor.execute('SELECT * FROM platforms WHERE platform_id = ?', (platform_id,))
+        row = self.cursor.fetchone()
+        if row:
+            column_names = [column[0] for column in self.cursor.description]  # Obter os nomes das colunas
+            platform_data = dict(zip(column_names, row))  # Mapear nomes das colunas aos dados da plataforma
+            return Platform.from_dict(platform_data)
+        return None
+    
 class Channels(TableInterface):
     def __init__(self, cursor:sqlite3.Cursor, conn:sqlite3.Connection):
         self.cursor = cursor
@@ -692,7 +649,15 @@ class Channels(TableInterface):
             return result[0]
         else:
             return None
-
+        
+    def get_by_id(self, platform_id: int):
+        self.cursor.execute('SELECT * FROM platforms WHERE platform_id = ?', (platform_id,))
+        row = self.cursor.fetchone()
+        if row:
+            column_names = [column[0] for column in self.cursor.description]  # Obter os nomes das colunas
+            platform_data = dict(zip(column_names, row))  # Mapear nomes das colunas aos dados da plataforma
+            return Channel.from_dict(platform_data)
+        return None
 
 class MsgsAn(TableInterface):
     def __init__(self, cursor:sqlite3.Cursor, conn:sqlite3.Connection):

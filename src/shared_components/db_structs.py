@@ -24,10 +24,31 @@ class Anime:
         self.producers = producers
         self.synopsis = synopsis
         self.anime_id:int = None
+        self.creation_date = None
 
     @classmethod
-    def from_dict(cls, data):
-        return cls(**data)
+    def from_dict(cls, data:dict):
+        obj = cls(
+            mal_id=data['mal_id'],
+            title=data['title'],
+            year=data['year'],
+            season=data['season'],
+            title_english=data.get('title_english'),
+            title_japanese=data.get('title_japanese'),
+            type=data.get('type'),
+            episodes=data.get('episodes'),
+            status=data.get('status'),
+            airing=data.get('airing'),
+            aired=data.get('aired'),
+            rating=data.get('rating'),
+            duration=data.get('duration'),
+            studios=data.get('studios'),
+            producers=data.get('producers'),
+            synopsis=data.get('synopsis')
+        )
+        obj.anime_id = data.get('anime_id')
+        obj.creation_date = data.get('creation_date')
+        return obj
 
     def to_dict(self):
         return self.__dict__
@@ -47,10 +68,22 @@ class Episode:
         self.download_link_sd = download_link_sd
         self.temp = temp
         self.episode_id:int = None
+        self.creation_date = None
 
     @classmethod
-    def from_dict(cls, data):
-        return cls(**data)
+    def from_dict(cls, data:dict):
+        obj = cls(
+            anime_id=data['anime_id'],
+            mal_id=data['mal_id'],
+            episode_number=data['episode_number'],
+            watch_link=data['watch_link'],
+            download_link_hd=data['download_link_hd'],
+            download_link_sd=data['download_link_sd'],
+            temp=data.get('temp')
+        )
+        obj.episode_id = data.get('episode_id')
+        obj.creation_date = data.get('creation_date')
+        return obj
 
     def to_dict(self):
         return self.__dict__
@@ -62,11 +95,15 @@ class Episode:
 class Platform:
     def __init__(self, platform_name:str):
         self.platform_name = platform_name
-        self.platfotm_id:int=None
+        self.platform_id:int = None
+        self.creation_date = None
 
     @classmethod
-    def from_dict(cls, data):
-        return cls(**data)
+    def from_dict(cls, data: dict):
+        obj = cls(platform_name=data['platform_name'])
+        obj.platform_id = data.get('platform_id')
+        obj.creation_date = data.get('creation_date')
+        return obj
 
     def to_dict(self):
         return self.__dict__
@@ -76,16 +113,25 @@ class Platform:
 
 
 class Channel:
-    def __init__(self, platform_id, chat_name=None, chat_id=None, chat_description=None):
+    def __init__(self, platform_id:int, chat_name:Optional[str]=None, chat_id:Optional[int]=None, chat_description:Optional[str]=None):
         self.platform_id = platform_id
         self.chat_name = chat_name
         self.chat_id = chat_id
         self.chat_description = chat_description
         self.channel_id:int=None
+        self.creation_date = None
 
     @classmethod
-    def from_dict(cls, data):
-        return cls(**data)
+    def from_dict(cls, data: dict):
+        obj = cls(
+            platform_id=data['platform_id'],
+            chat_name=data.get('chat_name'),
+            chat_id=data.get('chat_id'),
+            chat_description=data.get('chat_description')
+        )
+        obj.channel_id = data.get('channel_id')
+        obj.creation_date = data.get('creation_date')
+        return obj
 
     def to_dict(self):
         return self.__dict__
@@ -95,15 +141,23 @@ class Channel:
 
 
 class MsgAn:
-    def __init__(self, anime_id, message_id, channel_id):
+    def __init__(self, anime_id:int, message_id:int, channel_id:int):
         self.anime_id = anime_id
         self.message_id = message_id
         self.channel_id = channel_id
-        self.msg_an_id:int=None
+        self.msg_an_id:int = None
+        self.creation_date = None
 
     @classmethod
-    def from_dict(cls, data):
-        return cls(**data)
+    def from_dict(cls, data:dict):
+        obj = cls(
+            anime_id=data['anime_id'],
+            message_id=data['message_id'],
+            channel_id=data['channel_id']
+        )
+        obj.msg_an_id = data.get('msg_an_id')
+        obj.creation_date = data.get('creation_date')
+        return obj
 
     def to_dict(self):
         return self.__dict__
@@ -112,15 +166,23 @@ class MsgAn:
         return str(self.to_dict())
 
 class MsgEp:
-    def __init__(self, episode_id, message_id, channel_id):
+    def __init__(self, episode_id:int, message_id:int, channel_id:int):
         self.episode_id = episode_id
         self.message_id = message_id
         self.channel_id = channel_id
-        self.msg_ep_id:int=None
+        self.msg_ep_id:int = None
+        self.creation_date = None
 
     @classmethod
-    def from_dict(cls, data):
-        return cls(**data)
+    def from_dict(cls, data:dict):
+        obj = cls(
+            episode_id=data['episode_id'],
+            message_id=data['message_id'],
+            channel_id=data['channel_id']
+        )
+        obj.msg_ep_id = data.get('msg_ep_id')
+        obj.creation_date = data.get('creation_date')
+        return obj
 
     def to_dict(self):
         return self.__dict__

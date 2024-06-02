@@ -1,6 +1,6 @@
 from local.db_sqlite3 import SqliteManager
 from shared_components import data_colect
-from shared_components.db_structs import Anime, Episode, MsgAn, MsgEp
+from shared_components.db_structs import Anime, Episode, Platform, Channel, MsgAn, MsgEp
 from shared_components import values
 
 def _insert_animes_into_database(watch_links: list[list[dict]], download_links: list[list[dict]], animes_metadata: list[dict], database_path, print_log=False):
@@ -130,8 +130,8 @@ def get_anime_from_database(mal_id: int, database_path=values.DATABASE_PATH):
       - Anime data and a list o Episodes data.
     '''
     db = SqliteManager(database_path)
-    anime: Anime = db.animes.get_anime_by_mal_id(mal_id=mal_id)
-    episodes: list[Episode] = db.episodes.get_episodes_by_mal_id(mal_id=mal_id)
+    anime: Anime = db.animes.get_by_mal_id(mal_id=mal_id)
+    episodes: list[Episode] = db.episodes.get_by_mal_id(mal_id=mal_id)
     db.close()
     return anime, episodes
 
@@ -219,3 +219,37 @@ def data_print(database_path=values.DATABASE_PATH, num_animes=10, num_episodes=1
         print(episode)
         print()
         i += 1
+
+def init_animestele(
+        path = values.DATABASE_PATH, platform_name = values.TELEGRAM_NAME,
+        channel_name = values.ANIMESTELE_NAME, channel_id = values.ANIMESTELE_ID,
+        channel_description = values.ANIMESTELE_DESCRIPTION
+    ):
+    db = SqliteManager(path)
+    # See if platform exists
+    platform_id = db.platforms.get_table_primary_key(platform_name)
+    if platform_id is None:
+        platform = Platform(platform_name)
+        platform.platform_id = db.platforms.insert_in_table(platform)
+        channel = Channel(platform.platform_id, chat_name=channel_name, chat_id=channel_id, chat_description=channel_description)
+        channel.channel_id = db.channels.insert_in_table(channel)
+        db.close()
+        return platform, channel
+    # See if episode exits
+    else:
+        channel_id = db.channels.get_table_primary_key(platform_id, channel_id)
+        if channel_id is None:
+            platform = db.platforms.get_by_id(platform_id)
+            channel = Channel(platform_id, chat_name=channel_name, chat_id=channel_id, chat_description=channel_description)
+            channel.channel_id = db.channels.insert_in_table(channel)
+            db.close()
+            return platform, channel
+        # Both exists
+        else:
+            platform = db.platforms.get_by_id(platform_id)
+            channel = db.channels.get_by_id(channel_id)
+            db.close()
+            return platform, channel
+            
+            
+

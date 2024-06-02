@@ -16,3 +16,13 @@ BAD_ID = -1
 DATABASE_PATH = "data/animestele.db"
 
 # Telegram
+TELEGRAM_NAME = 'telegram'
+TELEGRAM_URL = 't.me/'
+ANIMESTELE_ID = -1002039517569
+ANIMESTELE_NAME = "animestele"
+ANIMESTELE_DESCRIPTION = (
+    "AnimesTele é a sua plataforma de animes no Telegram! "
+    "Somente animes legendados em pt-br. "
+    "Use nosso bot para pesquisar: "
+    "- AnimesTeleOficialBot: @animestele_oficial_bot"
+)
