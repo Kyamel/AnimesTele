@@ -1,10 +1,10 @@
-from local.db_sqlite3 import SqliteDB
+from local.db_sqlite3 import SqliteManager
 from shared_components import data_colect
-from shared_components.db_structs import Anime, Episode
+from shared_components.db_structs import Anime, Episode, MsgAn, MsgEp
 from shared_components import values
 
 def _insert_animes_into_database(watch_links: list[list[dict]], download_links: list[list[dict]], animes_metadata: list[dict], database_path, print_log=False):
-    db = SqliteDB(database_path)
+    db = SqliteManager(database_path)
     animes: list[Anime] = []
     episodes: list[Episode] = []
     # Inserir animes
@@ -28,7 +28,7 @@ def _insert_animes_into_database(watch_links: list[list[dict]], download_links: 
             producers=anime_data['producers'],
             synopsis=anime_data['synopsis']
         )
-        anime_id = db.insert_anime(anime)
+        anime_id = db.animes.insert_in_table(anime)
         anime.anime_id=anime_id
         animes.append(anime)
         if print_log:
@@ -64,10 +64,10 @@ def _insert_animes_into_database(watch_links: list[list[dict]], download_links: 
     for episode_number, episode_data_list in ordered_episodes:
         for episode_data in episode_data_list:
             episode = Episode(**episode_data)
-            episode_id = db.get_episode_mal_id(episode)
+            episode_id = db.episodes.insert_in_table(episode)
             if episode_id is None or -1:
-                episode.anime_id = db.get_anime_id_by_mal_id(episode.mal_id)
-                episode.episode_id = db.insert_episode(episode)
+                episode.anime_id = db.animes.get_table_primary_key(episode.mal_id)
+                episode.episode_id = db.episodes.insert_in_table(episode)
                 episodes.append(episode)
                 if print_log:
                     print(f'Episode added: {episode}')
@@ -129,27 +129,65 @@ def get_anime_from_database(mal_id: int, database_path=values.DATABASE_PATH):
      Return:
       - Anime data and a list o Episodes data.
     '''
-    db = SqliteDB(database_path)
-    anime: Anime = db.get_anime_by_mal_id(mal_id=mal_id)
-    episodes: list[Episode] = db.get_episodes_by_mal_id(mal_id=mal_id)
+    db = SqliteManager(database_path)
+    anime: Anime = db.animes.get_anime_by_mal_id(mal_id=mal_id)
+    episodes: list[Episode] = db.episodes.get_episodes_by_mal_id(mal_id=mal_id)
     db.close()
     return anime, episodes
 
-def update_anime_added_to(anime: Anime,  database_path=values.DATABASE_PATH):
+def save_msg_an(anime: Anime, message_id: int, platform_name: str, chat_id: int, chat_name: str, database_path:str=values.DATABASE_PATH):
     '''
-    Acess the method update_anime_added_to from class Database
-    '''
-    db = SqliteDB(database_path)
-    db.update_anime_added_to(anime=anime)
-    db.close()
+    Save a anime message into the database for future references (browser animes)
 
-def update_episode_added_to(episode: Episode,  database_path=values.DATABASE_PATH):
+    Args:
+     - anime: The anime that was sent in the message.
+     - message_id: The returned id of the message when the anime is successfully sent.
+     - chat_id: id of the chat where the message was sent.
+     - database_path: database in where the message will be sabe.
+
+    Returns:
+     - msg_an: The message saved into the database is returned with the updated value for the msg_an_id attribute.
+     - None: If message is not saved into the database due any erros, return None.
     '''
-    Acess the method update_episode_added_to from class Database
+    db = SqliteManager(database_path)
+    try:
+        platform_id = db.platforms.get_table_primary_key(platform_name)
+        if platform_id not in (None, -1):
+            channel_id = db.channels.get_table_primary_key(platform_id=platform_id, chat_id=chat_id, chat_name=chat_name)
+            if channel_id not in (None, -1):
+                msg_an = MsgAn(anime.anime_id, message_id, channel_id)
+                msg_an.msg_an_id = db.msgs_an.insert_in_table(msg_an)
+                return msg_an
+    finally:
+        db.close()
+
+def save_msg_ep(episode: Episode, message_id: int, platform_name: str, chat_id: int, chat_name: str, database_path: str = values.DATABASE_PATH):
     '''
-    db = SqliteDB(database_path)
-    db.update_episode_added_to(episode=episode)
-    db.close()
+    Save an episode message into the database for future references.
+
+    Args:
+     - episode: The episode that was sent in the message.
+     - message_id: The returned id of the message when the episode is successfully sent.
+     - platform_name: Name of the platform where the message was sent.
+     - chat_id: ID of the chat where the message was sent.
+     - chat_name: Name of the chat where the message was sent.
+     - database_path: Path to the database where the message will be saved.
+
+    Returns:
+     - MsgEp: The message saved into the database is returned with the updated value for the msg_ep_id attribute.
+     - None: If the message is not saved into the database due to any errors, return None.
+    '''
+    db = SqliteManager(database_path)
+    try:
+        platform_id = db.platforms.get_table_primary_key(platform_name)
+        if platform_id not in (None, -1):
+            channel_id = db.channels.get_table_primary_key(platform_id=platform_id, chat_id=chat_id, chat_name=chat_name)
+            if channel_id not in (None, -1):
+                msg_ep = MsgEp(episode.episode_id, message_id, channel_id)
+                msg_ep.msg_ep_id = db.msgs_ep.insert_in_table(msg_ep)
+                return msg_ep
+    finally:
+        db.close()
 
 def data_print(database_path=values.DATABASE_PATH, num_animes=10, num_episodes=10, return_all=False):
     '''
@@ -164,9 +202,9 @@ def data_print(database_path=values.DATABASE_PATH, num_animes=10, num_episodes=1
     Return:
      - None.
     '''
-    db = SqliteDB(database_path)
+    db = SqliteManager(database_path)
     print("\n>>>>>> ANIMES <<<<<<\n")
-    anime_list = db.get_animes_list(num_animes=num_animes, return_all=return_all)
+    anime_list = db.animes.get_animes_list(num_animes=num_animes, return_all=return_all)
     i = 1
     for anime in anime_list:
         print(f"entry: {i}")
@@ -175,7 +213,7 @@ def data_print(database_path=values.DATABASE_PATH, num_animes=10, num_episodes=1
         i += 1
     i = 1
     print("\n>>>>>> EPISODES <<<<<<\n")
-    episode_list = db.get_episodes_list(num_episodes=num_episodes, return_all=return_all)
+    episode_list = db.episodes.get_episodes_list(num_episodes=num_episodes, return_all=return_all)
     for episode in episode_list:
         print(f"entry: {i}")
         print(episode)

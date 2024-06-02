@@ -1,7 +1,12 @@
+from typing import Optional
+
+
 class Anime:
-    def __init__(self, mal_id, title, title_english=None, title_japanese=None, type=None, episodes=None, 
-                 status=None, airing=None, aired=None, rating=None, duration=None, season=None, year=None, 
-                 studios=None, producers=None, synopsis=None):
+    def __init__(
+            self, mal_id:int, title:str,  year:int,  season:str, title_english:Optional[str] = None, title_japanese:Optional[str] = None, type:Optional[str] = None, episodes:Optional[int] = None, 
+            status:Optional[str] = None, airing:Optional[bool] = None, aired:Optional[str] = None, rating:Optional[int] = None, duration:Optional[str] = None,
+            studios:Optional[str] = None, producers:Optional[str] = None, synopsis:Optional[str]=None
+        ):
         self.mal_id = mal_id
         self.title = title
         self.title_english = title_english
@@ -18,6 +23,7 @@ class Anime:
         self.studios = studios
         self.producers = producers
         self.synopsis = synopsis
+        self.anime_id:int = None
 
     @classmethod
     def from_dict(cls, data):
@@ -32,7 +38,7 @@ class Anime:
 
 class Episode:
     # in temp (temporary episode) attibute, use 0 to false, 1 to true.
-    def __init__(self, anime_id, mal_id, episode_number, watch_link, download_link_hd, download_link_sd, temp=0):
+    def __init__(self, anime_id:int, mal_id:int, episode_number:int, watch_link:str, download_link_hd:str, download_link_sd:str, temp=None):
         self.anime_id = anime_id
         self.mal_id = mal_id
         self.episode_number = episode_number
@@ -40,6 +46,7 @@ class Episode:
         self.download_link_hd = download_link_hd
         self.download_link_sd = download_link_sd
         self.temp = temp
+        self.episode_id:int = None
 
     @classmethod
     def from_dict(cls, data):
@@ -53,8 +60,9 @@ class Episode:
 
 
 class Platform:
-    def __init__(self, platform_name):
+    def __init__(self, platform_name:str):
         self.platform_name = platform_name
+        self.platfotm_id:int=None
 
     @classmethod
     def from_dict(cls, data):
@@ -73,6 +81,7 @@ class Channel:
         self.chat_name = chat_name
         self.chat_id = chat_id
         self.chat_description = chat_description
+        self.channel_id:int=None
 
     @classmethod
     def from_dict(cls, data):
@@ -90,6 +99,7 @@ class MsgAn:
         self.anime_id = anime_id
         self.message_id = message_id
         self.channel_id = channel_id
+        self.msg_an_id:int=None
 
     @classmethod
     def from_dict(cls, data):
@@ -106,6 +116,7 @@ class MsgEp:
         self.episode_id = episode_id
         self.message_id = message_id
         self.channel_id = channel_id
+        self.msg_ep_id:int=None
 
     @classmethod
     def from_dict(cls, data):

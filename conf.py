@@ -7,9 +7,9 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'AnimesTele'
-copyright = '2024, Lucas Camelo'
-author = 'Lucas Camelo'
-release = '30/05/2024'
+copyright = '2024, Kyamel'
+author = 'Kyamel'
+release = '02/06/2024'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -17,7 +17,7 @@ release = '30/05/2024'
 extensions = []
 
 templates_path = ['_templates']
-exclude_patterns = []
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 
 

@@ -148,7 +148,7 @@ class Telena:
                     else:
                         anime.added_to = f"{anime.added_to},{new_added_to}"
                     # save into database    
-                    db_sqlite3_acess.update_anime_added_to(anime)
+                    db_sqlite3_acess.save_msg_an(anime)
                     if print_log:
                         print(anime)
                 except Exception as e:
@@ -186,7 +186,7 @@ class Telena:
                             episode.added_to = new_added_to
                         else:
                             episode.added_to = f"{episode.added_to},{new_added_to}"
-                        db_sqlite3_acess.update_episode_added_to(episode)
+                        db_sqlite3_acess.save_msg_ep(episode)
                         if print_log:
                             print(episode)
                     except Exception as e:
