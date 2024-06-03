@@ -1,6 +1,7 @@
 import sqlite3
 from typing import List, Optional
-from shared_components.db_structs import Anime, Episode,Platform,Channel,MsgAn,MsgEp
+from shared_components.db_structs import Anime, Episode, Platform, Channel, MsgAn, MsgEp
+from shared_components import values
 
 class SqliteDB:
     def __init__(self, path):
@@ -403,15 +404,15 @@ class Animes(TableInterface):
         except sqlite3.Error as e:
             print(f"An error occurred inserting anime: {anime.title}.\nErrmsg: {e}")
             self.conn.rollback()
-            return None
+            return values.BAD_ID
 
-    def get_table_primary_key(self, mal_id:int) -> Optional[int]:
+    def get_table_primary_key(self, mal_id:int):
         self.cursor.execute('SELECT anime_id FROM animes WHERE mal_id = ?', (mal_id,))
         result = self.cursor.fetchone()
         if result:
             return result[0]
         else:
-            return None
+            return values.BAD_ID
         
     def get_by_mal_id(self, mal_id: int):
         self.cursor.execute('SELECT * FROM animes WHERE mal_id = ?', (mal_id,))
@@ -485,7 +486,7 @@ class Episodes(TableInterface):
         except sqlite3.Error as e:
             print(f"An error occurred inserting episode: {episode.episode_number}.\nErrmsg: {e}")
             self.conn.rollback()
-            return None
+            return values.BAD_ID
 
     def get_table_primary_key(self, mal_id:int, episode_number:int) -> Optional[int]:
         self.cursor.execute('SELECT episode_id FROM episodes WHERE mal_id = ? AND episode_number = ?', (mal_id, episode_number))
@@ -493,7 +494,7 @@ class Episodes(TableInterface):
         if result:
             return result[0]
         else:
-            return None
+            return values.BAD_ID
         
     def get_by_mal_id(self, mal_id: int):
         """
@@ -570,7 +571,7 @@ class Platforms(TableInterface):
         except sqlite3.Error as e:
             print(f"An error occurred inserting platform: {platform.platform_name}.\nErrmsg: {e}")
             self.conn.rollback()
-            return None
+            return values.BAD_ID
 
     def get_table_primary_key(self, platform_name:str) -> Optional[int]:
         self.cursor.execute('SELECT platform_id FROM platforms WHERE platform_name = ?', (platform_name,))
@@ -578,7 +579,7 @@ class Platforms(TableInterface):
         if result:
             return result[0]
         else:
-            return None
+            return values.BAD_ID
         
     def get_by_id(self, platform_id: int):
         """
@@ -637,7 +638,7 @@ class Channels(TableInterface):
         except sqlite3.Error as e:
             print(f"An error occurred inserting channel: {channel.chat_name}.\nErrmsg: {e}")
             self.conn.rollback()
-            return None
+            return values.BAD_ID
 
     def get_table_primary_key(self, platform_id:int, chat_name:str=None, chat_id:int=None) -> Optional[int]:
         '''
@@ -651,7 +652,7 @@ class Channels(TableInterface):
         if result:
             return result[0]
         else:
-            return None
+            return values.BAD_ID
         
     def get_by_id(self, platform_id: int):
         self.cursor.execute('SELECT * FROM platforms WHERE platform_id = ?', (platform_id,))
@@ -695,7 +696,7 @@ class MsgsAn(TableInterface):
         except sqlite3.Error as e:
             print(f"An error occurred inserting message for anime ID: {msg_an.anime_id}.\nErrmsg: {e}")
             self.conn.rollback()
-            return None
+            return values.BAD_ID
 
     def get_table_primary_key(self, anime_id:int, channel_id:int) -> Optional[int]:
         self.cursor.execute('SELECT msg_an_id FROM msgs_an WHERE anime_id = ? AND channel_id = ?', (anime_id, channel_id))
@@ -703,7 +704,7 @@ class MsgsAn(TableInterface):
         if result:
             return result[0]
         else:
-            return None
+            return values.BAD_ID
 
 
 class MsgsEp(TableInterface):
@@ -739,7 +740,7 @@ class MsgsEp(TableInterface):
         except sqlite3.Error as e:
             print(f"An error occurred inserting message for episode ID: {msg_ep.episode_id}.\nErrmsg: {e}")
             self.conn.rollback()
-            return None
+            return values.BAD_ID
 
     def get_table_primary_key(self, episode_id:int, channel_id:int) -> Optional[int]:
         self.cursor.execute('SELECT msg_ep_id FROM msgs_ep WHERE episode_id = ? AND channel_id = ?', (episode_id, channel_id))
@@ -747,7 +748,7 @@ class MsgsEp(TableInterface):
         if result:
             return result[0]
         else:
-            return None
+            return values.BAD_ID
 
 
 class MsgsGe:

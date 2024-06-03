@@ -17,11 +17,11 @@ def _insert_animes_into_database(watch_links: list[list[dict]], download_links: 
         anime = Anime.from_dict(anime_data)
         # Verifica se já existe
         anime_id = db.animes.get_table_primary_key(anime.mal_id)
-        if anime_id is None or anime_id == -1:
+        if anime_id is None or anime_id == values.BAD_ID:
             anime_id = db.animes.insert_in_table(anime)
             anime.anime_id=anime_id
             animes.append(anime)
-            if anime_id is not None or anime_id != -1:
+            if anime_id is not None or anime_id != values.BAD_ID:
                 if print_log:
                     print(f'Anime added: {anime}')
         else:
@@ -43,7 +43,7 @@ def _insert_animes_into_database(watch_links: list[list[dict]], download_links: 
                 'temp': download_episode['temp']
             }
             combined_episodes.append(combined_episode)
-            
+
     # Agora, combined_links contém todos os episódios combinados em uma estrutura de dicionário de listas
     if print_log:
         print('\n>>>>>> Add Episode <<<<<<\n')
@@ -57,12 +57,12 @@ def _insert_animes_into_database(watch_links: list[list[dict]], download_links: 
         episode = Episode.from_dict(episode_data)
         # Verificar se o episodio existe no banco de dados
         episode_id = db.episodes.get_table_primary_key(episode.mal_id, episode.episode_number)
-        if episode_id is None or episode_id == -1:
+        if episode_id is None or episode_id == values.BAD_ID:
             # Se o episódio não existe, inseri-lo e adicionar à lista de episódios
             episode_id = db.episodes.insert_in_table(episode)
             episode.episode_id = episode_id
             episodes.append(episode)
-            if episode_id is not None or episode_id != -1:
+            if episode_id is not None or episode_id != values.BAD_ID:
                 if print_log:
                     print(f'Episode added: {episode}')
         else:
