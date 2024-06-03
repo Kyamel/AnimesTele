@@ -1,7 +1,7 @@
-from local.db_sqlite3 import SqliteManager
-from shared_components import data_colect
-from shared_components.db_structs import Anime, Episode, Platform, Channel, MsgAn, MsgEp
-from shared_components import values
+from src.local.db_sqlite3 import SqliteManager
+from src.shared_components import data_colect
+from src.shared_components.db_structs import Anime, Episode, Platform, Channel, MsgAn, MsgEp
+from src.shared_components import values
 
 def _insert_animes_into_database(watch_links: list[list[dict]], download_links: list[list[dict]], animes_metadata: list[dict], database_path, print_log=False):
     db = SqliteManager(database_path)
@@ -71,7 +71,7 @@ def _insert_animes_into_database(watch_links: list[list[dict]], download_links: 
     db.close()
     return animes, episodes
 
-def extract_releasing_animes_from_af_and_insert_into_database(extract_amount = 1, start_page = 1, database_path = values.DATABASE_PATH, print_log=False):
+def extract_releasing_animes_from_af_and_insert_into_database(extract_amount:int = 1, start_page:int = 1, database_path = values.DATABASE_PATH, print_log=False):
     '''
     Exxtract dara from Anime Fire and MyAnimeList and inserts in a sqlite3 database
 

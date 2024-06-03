@@ -3,15 +3,18 @@ import datetime
 import httpx
 from telegram import Bot, InputMediaVideo, KeyboardButton, ReplyKeyboardMarkup, Message
 from telegram.error import TimedOut
-from shared_components import values
-from local import db_sqlite3_acess 
-from shared_components.api.bot_api.sensitive import token
+from src.shared_components import values
+from src.local import db_sqlite3_acess 
+from src.shared_components.api.bot_api.sensitive import token
 
 class Telena:
 
     def __init__(self, token=token.TOKEN_TELENA):
         self.token = token
         self.bot = Bot(token=token)
+        platform, channel = db_sqlite3_acess.init_animestele()
+        self.platform = platform
+        self.chaneel = channel
 
     def check_token(self):
         user = self.bot.getMe()

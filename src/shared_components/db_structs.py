@@ -1,5 +1,5 @@
+from datetime import datetime
 from typing import Optional
-
 
 class Anime:
     def __init__(
@@ -23,8 +23,8 @@ class Anime:
         self.studios = studios
         self.producers = producers
         self.synopsis = synopsis
-        self.anime_id:int = None
-        self.creation_date = None
+        self.anime_id:Optional[int] = None
+        self.creation_date:Optional[datetime] = None
 
     @classmethod
     def from_dict(cls, data:dict):
@@ -59,7 +59,7 @@ class Anime:
 
 class Episode:
     # in temp (temporary episode) attibute, use 0 to false, 1 to true.
-    def __init__(self, anime_id:int, mal_id:int, episode_number:int, watch_link:str, download_link_hd:str, download_link_sd:str, temp=None):
+    def __init__(self, anime_id:int, mal_id:int, episode_number:int, watch_link:str, download_link_hd:str, download_link_sd:str, temp:Optional[bool]=None):
         self.anime_id = anime_id
         self.mal_id = mal_id
         self.episode_number = episode_number
@@ -67,8 +67,8 @@ class Episode:
         self.download_link_hd = download_link_hd
         self.download_link_sd = download_link_sd
         self.temp = temp
-        self.episode_id:int = None
-        self.creation_date = None
+        self.episode_id:Optional[int] = None
+        self.creation_date:Optional[datetime] = None
 
     @classmethod
     def from_dict(cls, data:dict):
@@ -95,8 +95,8 @@ class Episode:
 class Platform:
     def __init__(self, platform_name:str):
         self.platform_name = platform_name
-        self.platform_id:int = None
-        self.creation_date = None
+        self.platform_id:Optional[int] = None
+        self.creation_date:Optional[datetime] = None
 
     @classmethod
     def from_dict(cls, data: dict):
@@ -113,20 +113,20 @@ class Platform:
 
 
 class Channel:
-    def __init__(self, platform_id:int, chat_name:Optional[str]=None, chat_id:Optional[int]=None, chat_description:Optional[str]=None):
+    def __init__(self, platform_id:int, chat_name:str, chat_id:str, chat_description:Optional[str]=None):
         self.platform_id = platform_id
         self.chat_name = chat_name
         self.chat_id = chat_id
         self.chat_description = chat_description
-        self.channel_id:int=None
-        self.creation_date = None
+        self.channel_id:Optional[int] = None
+        self.creation_date: Optional[datetime] = None
 
     @classmethod
     def from_dict(cls, data: dict):
         obj = cls(
             platform_id=data['platform_id'],
-            chat_name=data.get('chat_name'),
-            chat_id=data.get('chat_id'),
+            chat_name=data['chat_name'],
+            chat_id=data['chat_id'],
             chat_description=data.get('chat_description')
         )
         obj.channel_id = data.get('channel_id')
@@ -145,8 +145,8 @@ class MsgAn:
         self.anime_id = anime_id
         self.message_id = message_id
         self.channel_id = channel_id
-        self.msg_an_id:int = None
-        self.creation_date = None
+        self.msg_an_id:Optional[int] = None
+        self.creation_date:Optional[datetime] = None
 
     @classmethod
     def from_dict(cls, data:dict):
@@ -170,8 +170,8 @@ class MsgEp:
         self.episode_id = episode_id
         self.message_id = message_id
         self.channel_id = channel_id
-        self.msg_ep_id:int = None
-        self.creation_date = None
+        self.msg_ep_id:Optional[int] = None
+        self.creation_date:Optional[datetime] = None
 
     @classmethod
     def from_dict(cls, data:dict):

@@ -1,7 +1,7 @@
 import sqlite3
 from typing import List, Optional
-from shared_components.db_structs import Anime, Episode, Platform, Channel, MsgAn, MsgEp
-from shared_components import values
+from src.shared_components.db_structs import Anime, Episode, Platform, Channel, MsgAn, MsgEp
+from src.shared_components import values
 
 class SqliteDB:
     def __init__(self, path):
@@ -226,75 +226,11 @@ class SqliteDB:
         # 15. donation table
         # 16. subscription table
         self.conn.commit()
-
-    def get_anime_mal_id_by_title(self, title: str) -> int:
-        self.cursor.execute('SELECT mal_id FROM animes WHERE title = ?', (title,))
-        row = self.cursor.fetchone()
-        if row:
-            return row[0]
-        return None
     
     def get_all_anime_titles_and_ids(self) -> list:
         self.cursor.execute('SELECT mal_id, title FROM animes')
         rows = self.cursor.fetchall()
         return [(row[0], row[1]) for row in rows]
-    
-    def get_anime_id_by_mal_id(self, mal_id: int) -> int:
-        try:
-            self.cursor.execute('''
-                SELECT anime_id
-                FROM animes
-                WHERE mal_id = ?
-            ''', (mal_id,))
-            result = self.cursor.fetchone()
-            if result:
-                return result[0]
-            else:
-                return None
-        except sqlite3.Error as e:
-            print(f"Error retrieving anime_id for mal_id {mal_id}: {e}")
-            return None
-
-    def get_episodes_by_mal_id(self, mal_id: int):
-        self.cursor.execute('SELECT * FROM episodes WHERE mal_id = ?', (mal_id,))
-        rows = self.cursor.fetchall()
-        episodes: List[Episode] = []
-        for row in rows:
-            episode = Episode(
-                episode_id=row[0],
-                anime_id=row[1],
-                mal_id=row[2],
-                episode_number=row[3],
-                watch_link=row[4],
-                download_link_hd=row[5],
-                download_link_sd=row[6],
-                temp=row[7],
-                added_to=row[8]
-            )
-            episodes.append(episode)
-        return episodes
-    
-    def get_episode_by_mal_id_and_number(self, mal_id: int, episode_number: int):
-        self.cursor.execute('SELECT * FROM episodes WHERE mal_id = ? AND episode_number = ?', (mal_id, episode_number))
-        row = self.cursor.fetchone()
-        if row:
-            column_names = [column[0] for column in self.cursor.description]  # Obter os nomes das colunas
-            episode_data = dict(zip(column_names, row))  # Mapear nomes das colunas aos dados do episódio
-
-            return Episode(
-                episode_id=episode_data['episode_id'],
-                anime_id=episode_data['anime_id'],
-                mal_id=episode_data['mal_id'],
-                episode_number=episode_data['episode_number'],
-                watch_link=episode_data['watch_link'],
-                download_link_hd=episode_data['download_link_hd'],
-                download_link_sd=episode_data['download_link_sd'],
-                release_date=episode_data['release_date'],
-                temp=episode_data['temp'],
-                added_to=episode_data['added_to']
-            )
-        return None
-    
     
     
     def get_episode_mal_id(self, episode: Episode) -> Optional[int]:
@@ -327,7 +263,7 @@ class SqliteDB:
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 class TableInterface:
-    def create_table() -> None:
+    def create_table(self) -> None:
         raise NotImplementedError("Subclass must implement abstract method")
 
     def insert_in_table(self, arg) -> int|None:
@@ -640,7 +576,7 @@ class Channels(TableInterface):
             self.conn.rollback()
             return values.BAD_ID
 
-    def get_table_primary_key(self, platform_id:int, chat_name:str=None, chat_id:int=None) -> Optional[int]:
+    def get_table_primary_key(self, platform_id:int, chat_name:str, chat_id:int):
         '''
         You must provide a chat_name or a chat_id.
         '''

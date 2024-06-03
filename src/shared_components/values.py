@@ -8,7 +8,7 @@ URL_AF_DOWNLOADS:str = "https://animefire.plus/download/"
 URL_AF_FILTER_RELEAES:str = 'https://animefire.plus/animes/'
 URL_JIKAN_SEARCH:str = "https://api.jikan.moe/v4/anime?q="
 URL_JIKAN_SEARCH_BY_MALID:str = "https://api.jikan.moe/v4/anime/"
-URLS_AF_FILTER_DOWNLOADS_LINKS:str = ["https://s2.lightspeedst.net/s2/mp4/", "https://s2.lightspeedst.net/s2/mp4_temp/"]
+URLS_AF_FILTER_DOWNLOADS_LINKS:list[str] = ["https://s2.lightspeedst.net/s2/mp4/", "https://s2.lightspeedst.net/s2/mp4_temp/"]
 HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
 
 # Database
