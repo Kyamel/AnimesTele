@@ -7,72 +7,67 @@ def _insert_animes_into_database(watch_links: list[list[dict]], download_links: 
     db = SqliteManager(database_path)
     animes: list[Anime] = []
     episodes: list[Episode] = []
+
+    if print_log:
+        print('\n>>>>>> Add Anime <<<<<<\n')
+
     # Inserir animes
     for anime_data in animes_metadata:
         # Criar instância do objeto Anime
-        anime = Anime(
-            mal_id=anime_data['mal_id'],
-            title=anime_data['title'],
-            title_english=anime_data['title_english'],
-            title_japanese=anime_data['title_japanese'],
-            type=anime_data['type'],
-            episodes=anime_data['episodes'],
-            status=anime_data['status'],
-            airing=anime_data['airing'],
-            aired=anime_data['aired'],
-            rating=anime_data['rating'],
-            duration=anime_data['duration'],
-            season=anime_data['season'],
-            year=anime_data['year'],
-            studios=anime_data['studios'],
-            producers=anime_data['producers'],
-            synopsis=anime_data['synopsis']
-        )
-        anime_id = db.animes.insert_in_table(anime)
-        anime.anime_id=anime_id
-        animes.append(anime)
-        if print_log:
-            print(f'Anime added: {anime}')
+        anime = Anime.from_dict(anime_data)
+        # Verifica se já existe
+        anime_id = db.animes.get_table_primary_key(anime.mal_id)
+        if anime_id is None or anime_id == -1:
+            anime_id = db.animes.insert_in_table(anime)
+            anime.anime_id=anime_id
+            animes.append(anime)
+            if anime_id is not None or anime_id != -1:
+                if print_log:
+                    print(f'Anime added: {anime}')
+        else:
+            print(f"Anime {anime.title} already exists in database")
     
-    combined_links = {}
-    # Itera sobre cada lista de links de assistir e fazer download
+    combined_episodes = []
     for watch_list, download_list in zip(watch_links, download_links):
-        # Itera sobre os episódios de cada lista
         for watch_episode, download_episode in zip(watch_list, download_list):
-            # Certifica-se de que os episódios têm o mesmo número
+            # Certifique-se de que os episódios têm o mesmo número
             assert watch_episode['ep'] == download_episode['episode'], "Números de episódio diferentes"
-
-            episode_number = watch_episode['ep']
-            combined_links.setdefault(episode_number, [])
-            combined_links[episode_number].append({
+            
+            # Combine os dados do episódio de assistir e fazer download
+            combined_episode = {
                 'mal_id': watch_episode['mal_id'],
-                'episode_number': episode_number,
+                'episode_number': watch_episode['ep'],
                 'watch_link': watch_episode['watch_link'],
                 'download_link_hd': download_episode['hd'],
                 'download_link_sd': download_episode['sd'],
                 'temp': download_episode['temp']
-            })
-
-    # Ordena os episódios com base no número do episódio
-    ordered_episodes = sorted(combined_links.items())
-
+            }
+            combined_episodes.append(combined_episode)
+            
     # Agora, combined_links contém todos os episódios combinados em uma estrutura de dicionário de listas
-    # Você pode iterar sobre combined_links e inserir todos os episódios no banco de dados de uma vez
     if print_log:
         print('\n>>>>>> Add Episode <<<<<<\n')
 
-    for episode_number, episode_data_list in ordered_episodes:
-        for episode_data in episode_data_list:
-            episode = Episode(**episode_data)
+    for episode_data in combined_episodes:
+        # Obter anime_id com base no mal_id do episódio
+        anime_id = db.animes.get_table_primary_key(episode_data['mal_id'])
+        # Incluir anime_id nos dados do episódio
+        episode_data['anime_id'] = anime_id
+        # Criar o objeto Episode a partir dos dados do episódio
+        episode = Episode.from_dict(episode_data)
+        # Verificar se o episodio existe no banco de dados
+        episode_id = db.episodes.get_table_primary_key(episode.mal_id, episode.episode_number)
+        if episode_id is None or episode_id == -1:
+            # Se o episódio não existe, inseri-lo e adicionar à lista de episódios
             episode_id = db.episodes.insert_in_table(episode)
-            if episode_id is None or -1:
-                episode.anime_id = db.animes.get_table_primary_key(episode.mal_id)
-                episode.episode_id = db.episodes.insert_in_table(episode)
-                episodes.append(episode)
+            episode.episode_id = episode_id
+            episodes.append(episode)
+            if episode_id is not None or episode_id != -1:
                 if print_log:
                     print(f'Episode added: {episode}')
-            else:
-                print(f'Episode already exits: id - {episode_id}, mal_id - {episode.mal_id}, ep - {episode.episode_number}')
+        else:
+            # Se o episódio já existe, imprimir mensagem de aviso
+            print(f'Episode already exists: id - {episode_id}, mal_id - {episode.mal_id}, ep - {episode.episode_number}')
     db.close()
     return animes, episodes
 

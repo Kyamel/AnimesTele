@@ -326,6 +326,9 @@ class SqliteDB:
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 class TableInterface:
+    def create_table() -> None:
+        raise NotImplementedError("Subclass must implement abstract method")
+
     def insert_in_table(self, arg) -> int|None:
         raise NotImplementedError("Subclass must implement abstract method")
     
@@ -345,7 +348,7 @@ class SqliteManager:
     def create_tables(self):
         for attr_name in dir(self):
             attr = getattr(self, attr_name)
-            if callable(attr) and hasattr(attr, 'create_table'):
+            if isinstance(attr, TableInterface):
                 attr.create_table()
 
     def close(self):

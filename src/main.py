@@ -40,8 +40,8 @@ async def local_windows_debug():
     print("Debugging in local Windows mode...")
     animes, episdoes = db_sqlite3_acess.extract_releasing_animes_from_af_and_insert_into_database(start_page=3, extract_amount=2, print_log=True)
     telena = Telena(token=token.TOKEN_TELENA)  
-    for anime in animes:
-        await telena.add_anime_to_telegram(chat_id="@AnimesTele",mal_id=anime.mal_id, print_log=True)
+    #for anime in animes:
+        #await telena.add_anime_to_telegram(chat_id="@AnimesTele",mal_id=anime.mal_id, print_log=True)
 
     
 async def server_run():
@@ -51,8 +51,8 @@ async def server_run():
         print_log=True
     )
     telena = Telena(token=token.TOKEN_TELENA)  
-    for anime in animes:
-        await telena.add_anime_to_telegram(chat_id="@AnimesTele",mal_id=anime.mal_id, print_log=True)
+    #for anime in animes:
+       # await telena.add_anime_to_telegram(chat_id="@AnimesTele",mal_id=anime.mal_id, print_log=True)
                                  
 async def server_debug():
     print("Debugging in server mode...")
