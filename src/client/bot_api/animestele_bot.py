@@ -3,16 +3,16 @@ import datetime
 import httpx
 from telegram import Bot, InputMediaVideo, KeyboardButton, ReplyKeyboardMarkup, Message
 from telegram.error import TimedOut
-from src.shared_components import values
-from src.local import db_sqlite3_acess 
-from src.shared_components.api.bot_api.sensitive import token
+from shared_components import values
+from interface import db_acess 
+from client.bot_api.sensitive import token
 
 class Telena:
 
     def __init__(self, token=token.TOKEN_TELENA):
         self.token = token
         self.bot = Bot(token=token)
-        platform, channel = db_sqlite3_acess.init_animestele()
+        platform, channel = db_acess.init_animestele()
         self.platform = platform
         self.chaneel = channel
 
@@ -107,11 +107,11 @@ class Telena:
             print(f"Error editing message {message_id} in chat {chat_id}: {e}")
 
 
-    async def add_anime_to_telegram(self, chat_id, mal_id: int, database_path=values.DATABASE_PATH, print_log=False):
+    async def add_anime_to_telegram(self, chat_id, mal_id: int, database_path=values.SQLITE_DATABASE_PATH, print_log=False):
         try:
             if print_log:
                 print(f"Trying to send anime {mal_id} to telegram channel {chat_id}")
-            anime, episodes = db_sqlite3_acess.get_anime_from_database(mal_id=mal_id, database_path=database_path)
+            anime, episodes = db_acess.get_anime_from_database(mal_id=mal_id, database_path=database_path)
             
             # Verify if anime is not in telegram yet
             if '#telegram' not in anime.added_to:
@@ -151,7 +151,7 @@ class Telena:
                     else:
                         anime.added_to = f"{anime.added_to},{new_added_to}"
                     # save into database    
-                    db_sqlite3_acess.save_msg_an(anime)
+                    db_acess.save_msg_an(anime)
                     if print_log:
                         print(anime)
                 except Exception as e:
@@ -189,7 +189,7 @@ class Telena:
                             episode.added_to = new_added_to
                         else:
                             episode.added_to = f"{episode.added_to},{new_added_to}"
-                        db_sqlite3_acess.save_msg_ep(episode)
+                        db_acess.save_msg_ep(episode)
                         if print_log:
                             print(episode)
                     except Exception as e:

@@ -1,7 +1,16 @@
 import sqlite3
-from typing import List, Optional
-from src.shared_components.db_structs import Anime, Episode, Platform, Channel, MsgAn, MsgEp
-from src.shared_components import values
+from typing import Optional
+from interface.db_interface import (
+    AnimesTableInterface, ChannelsTableInterface, DatabaseManagerInterface, EpisodeTableInterface,
+    MsgsAnTableInterface, MsgsEpTableInterface, PlatformsTableInterface
+)
+from shared_components.db_structs import Anime, Episode, Platform, Channel, MsgAn, MsgEp
+from shared_components import values
+import logging
+
+# Configurar o logger
+logging.basicConfig(filename=values.LOG_PATH, level=logging.ERROR)
+
 
 class SqliteDB:
     def __init__(self, path):
@@ -262,43 +271,15 @@ class SqliteDB:
     
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-class TableInterface:
-    def create_table(self) -> None:
-        raise NotImplementedError("Subclass must implement abstract method")
 
-    def insert_in_table(self, arg) -> int|None:
-        raise NotImplementedError("Subclass must implement abstract method")
     
-class SqliteManager:
-    def __init__(self, path:str):
-        self.path = path
-        self.conn = sqlite3.connect(path)
-        self.cursor = self.conn.cursor()
-        self.animes = Animes(self.cursor, self.conn)
-        self.episodes = Episodes(self.cursor, self.conn)
-        self.platforms = Platforms(self.cursor, self.conn)
-        self.channels = Channels(self.cursor, self.conn)
-        self.msgs_an = MsgsAn(self.cursor, self.conn)
-        self.msgs_ep = MsgsEp(self.cursor, self.conn)
-        self.create_tables()
+# Agora podemos implementar as classes Animes, Episodes e Platforms
+class SQLiteAnimes(AnimesTableInterface):
+    def __init__(self, database_manager: DatabaseManagerInterface):
+        super().__init__(database_manager)
 
-    def create_tables(self):
-        for attr_name in dir(self):
-            attr = getattr(self, attr_name)
-            if isinstance(attr, TableInterface):
-                attr.create_table()
-
-    def close(self):
-        self.cursor.close()
-        self.conn.close()
-
-class Animes(TableInterface):
-    def __init__(self, cursor:sqlite3.Cursor, conn:sqlite3.Connection):
-        self.cursor = cursor
-        self.conn = conn
-    
     def create_table(self):
-        self.cursor.execute('''
+        query = '''
             CREATE TABLE IF NOT EXISTS animes (
                 anime_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 mal_id INTEGER UNIQUE NOT NULL,
@@ -319,75 +300,67 @@ class Animes(TableInterface):
                 synopsis TEXT,
                 creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        ''')
+        '''
+        self.database_manager.execute_non_query(query)
 
-    def insert_in_table(self, anime: Anime):
+    def insert_data(self, anime: Anime):
+        query = '''
+            INSERT INTO animes (
+                mal_id, title, title_english, title_japanese, type, episodes, 
+                status, airing, aired, rating, duration, season, year, studios, 
+                producers, synopsis
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        '''
+        params = (
+            anime.mal_id, anime.title, anime.title_english, anime.title_japanese, anime.type, 
+            anime.episodes, anime.status, anime.airing, anime.aired, anime.rating, 
+            anime.duration, anime.season, anime.year, anime.studios, anime.producers, 
+            anime.synopsis
+        )
         try:
-            self.cursor.execute('''
-                INSERT INTO animes (
-                    mal_id, title, title_english, title_japanese, type, episodes, 
-                    status, airing, aired, rating, duration, season, year, studios, 
-                    producers, synopsis
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                anime.mal_id, anime.title, anime.title_english, anime.title_japanese, anime.type, 
-                anime.episodes, anime.status, anime.airing, anime.aired, anime.rating, 
-                anime.duration, anime.season, anime.year, anime.studios, anime.producers, 
-                anime.synopsis
-            ))
-            self.conn.commit()
-            return self.cursor.lastrowid
+            primary_key = self.database_manager.execute_non_query(query, params)
+            if primary_key is None:
+                ValueError(f"Failed to retrieve primary key for anime: {anime.title}")
+                return values.BAD_ID
+            return primary_key
         except sqlite3.Error as e:
-            print(f"An error occurred inserting anime: {anime.title}.\nErrmsg: {e}")
-            self.conn.rollback()
+            logging.error(f"An error occurred inserting anime: {anime.title}.\nErrmsg: {e}")
             return values.BAD_ID
 
-    def get_table_primary_key(self, mal_id:int):
-        self.cursor.execute('SELECT anime_id FROM animes WHERE mal_id = ?', (mal_id,))
-        result = self.cursor.fetchone()
-        if result:
-            return result[0]
-        else:
-            return values.BAD_ID
-        
-    def get_by_mal_id(self, mal_id: int):
-        self.cursor.execute('SELECT * FROM animes WHERE mal_id = ?', (mal_id,))
-        row = self.cursor.fetchone()
+    def get_primary_key(self, mal_id: int):
+        query = 'SELECT anime_id FROM animes WHERE mal_id = ?'
+        value = self.database_manager.fetch_value(query, (mal_id,))
+        if value:
+            try:
+                primary_key = int(value)
+            except (ValueError, TypeError):
+                return values.BAD_ID
+            return primary_key
+        return values.BAD_ID
+
+    def get_by_id(self, anime_id: int):
+        query = 'SELECT * FROM animes WHERE anime_id = ?'
+        row, column_names = self.database_manager.fetch_one_and_get_column_names(query, (anime_id,))
         if row:
-            column_names = [column[0] for column in self.cursor.description]  # Obter os nomes das colunas
-            anime_data = dict(zip(column_names, row))  # Mapear nomes das colunas aos dados do anime
+            anime_data = dict(zip(column_names, row))
             return Anime.from_dict(anime_data)
-        
-        return None
+        return values.NOT_FOUND
     
-    def get_animes_list(self, num_animes=1, return_all=False):
-        if return_all:
-            self.cursor.execute('SELECT anime_id, mal_id, title, title_english, title_japanese, type,'
-                                'episodes, status, airing, aired, rating, duration, season, year, studios, producers, synopsis, creation_date FROM animes')
-        else:
-            self.cursor.execute('SELECT anime_id, mal_id, title, title_english, title_japanese,'
-                                'type, episodes, status, airing, aired, rating, duration, season, year,'
-                                'studios, producers, synopsis, channel, creation_date FROM animes ORDER BY mal_id DESC LIMIT ?', (num_animes,))
-        rows = self.cursor.fetchall()
+    def get_by_mal_id(self, mal_id: int):
+        query = 'SELECT * FROM animes WHERE mal_id = ?'
+        row, column_names = self.database_manager.fetch_one_and_get_column_names(query, (mal_id,))
+        if row:
+            anime_data = dict(zip(column_names, row))
+            return Anime.from_dict(anime_data)
+        return values.NOT_FOUND
+               
 
-        animes: list[Anime] = []
-        for row in rows:
-            column_names = [column[0] for column in self.cursor.description]  # Obter os nomes das colunas
-            anime_data = dict(zip(column_names, row))  # Mapear nomes das colunas aos dados do anime
+class SQLiteEpisodes(EpisodeTableInterface):
+    def __init__(self, database_manager: DatabaseManagerInterface):
+        super().__init__(database_manager)
 
-            anime = Anime.from_dict(anime_data)
-            animes.append(anime)
-
-        return animes
-
-
-class Episodes(TableInterface):
-    def __init__(self, cursor:sqlite3.Cursor, conn:sqlite3.Connection):
-        self.cursor = cursor
-        self.conn = conn
-    
     def create_table(self):
-        self.cursor.execute('''
+        query = '''
             CREATE TABLE IF NOT EXISTS episodes (
                 episode_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 anime_id INTEGER NOT NULL REFERENCES animes(anime_id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -404,35 +377,52 @@ class Episodes(TableInterface):
                 UNIQUE (download_link_hd),
                 UNIQUE (download_link_sd)
             )
-        ''')
-
-    def insert_in_table(self, episode: Episode):
+        '''
+        self.database_manager.execute_non_query(query)
+    def insert_data(self, episode:Episode):
+        query = '''
+            INSERT INTO episodes (
+                anime_id, mal_id, episode_number, watch_link, 
+                download_link_hd, download_link_sd, temp
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        '''
+        params = (
+            episode.anime_id, episode.mal_id, episode.episode_number, episode.watch_link, 
+            episode.download_link_hd, episode.download_link_sd, episode.temp
+        )
         try:
-            self.cursor.execute('''
-                INSERT INTO episodes (
-                    anime_id, mal_id, episode_number, watch_link, 
-                    download_link_hd, download_link_sd, temp
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                episode.anime_id, episode.mal_id, episode.episode_number, episode.watch_link, 
-                episode.download_link_hd, episode.download_link_sd, episode.temp
-            ))
-            self.conn.commit()
-            return self.cursor.lastrowid
+            primary_key = self.database_manager.execute_non_query(query, params)
+            if primary_key is None:
+                ValueError(f"Failed to retrieve primary key for episode: {episode.episode_number}")
+                return values.BAD_ID
+            return primary_key
         except sqlite3.Error as e:
-            print(f"An error occurred inserting episode: {episode.episode_number}.\nErrmsg: {e}")
-            self.conn.rollback()
+            logging.error(f"An error occurred inserting episode: {episode.episode_number}.\nErrmsg: {e}")
             return values.BAD_ID
 
-    def get_table_primary_key(self, mal_id:int, episode_number:int) -> Optional[int]:
-        self.cursor.execute('SELECT episode_id FROM episodes WHERE mal_id = ? AND episode_number = ?', (mal_id, episode_number))
-        result = self.cursor.fetchone()
-        if result:
-            return result[0]
-        else:
-            return values.BAD_ID
-        
-    def get_by_mal_id(self, mal_id: int):
+
+    def get_primary_key(self, mal_id:int, episode_number:int):
+        query = 'SELECT episode_id FROM episodes WHERE mal_id = ? AND episode_number = ?' 
+        params = (mal_id, episode_number)
+        value = self.database_manager.fetch_value(query, params)
+        if value:
+            try:
+                primary_key = int(value)
+            except (ValueError, TypeError):
+                return values.BAD_ID
+            return primary_key        
+        return values.BAD_ID
+    
+    def get_by_id(self, episode_id:int):
+        query = 'SELECT * FROM episodes WHERE episode_id = ?'
+        params = (episode_id,)
+        row, column_names = self.database_manager.fetch_one_and_get_column_names(query, params)
+        if row:
+            data = dict(zip(column_names, row))  # Mapear nomes das colunas aos dados do anime
+            return Episode.from_dict(data)
+        return values.NOT_FOUND
+
+    def get_episodes_by_mal_id(self, mal_id: int):
         """
         Get all episodes corresponding to a given MAL ID.
 
@@ -442,82 +432,67 @@ class Episodes(TableInterface):
         Returns:
             - List of Episode objects.
         """
-        self.cursor.execute('''
+        query = '''
             SELECT anime_id, episode_id, episode_number, watch_link, download_link_hd,
                 download_link_sd, release_date, temp, creation_date
             FROM episodes
             WHERE mal_id = ?
             ORDER BY release_date DESC, episode_number, added_to DESC
-        ''', (mal_id,))
-        
-        rows = self.cursor.fetchall()
+        ''' 
+        params = (mal_id,)
+        rows, column_names = self.database_manager.fetch_all_and_get_column_names(query, params)
         if not rows:
-            return None
-        
-        episodes: List[Episode] = []
-        column_names = [column[0] for column in self.cursor.description]  # Obter os nomes das colunas
+            return values.NOT_FOUND
+        episodes:list[Episode] = []
         for row in rows:
-            episode_data = dict(zip(column_names, row))  # Mapear nomes das colunas aos dados do episódio
+            episode_data = dict(zip(column_names, row))
             episode = Episode.from_dict(episode_data)
             episodes.append(episode)
-
-        return episodes
-    
-    def get_episodes_list(self, num_episodes=1, return_all=False):
-        if return_all:
-            self.cursor.execute('SELECT episode_id, anime_id, mal_id, episode_number, watch_link, download_link_hd,'
-                                'download_link_sd, release_date, temp, added_to FROM episodes ORDER BY release_date DESC, episode_number, added_to DESC')
-        else:
-            self.cursor.execute('SELECT episode_id, anime_id, mal_id, episode_number, watch_link, download_link_hd,'
-                                'download_link_sd, release_date, temp, added_to FROM episodes ORDER BY release_date DESC, episode_number, added_to DESC LIMIT ?', (num_episodes,))
-        rows = self.cursor.fetchall()
-
-        episodes: List[Episode] = []
-        column_names = [column[0] for column in self.cursor.description]  # Obter os nomes das colunas
-        for row in rows:
-            episode_data = dict(zip(column_names, row))  # Mapear nomes das colunas aos dados do episódio
-            episode = Episode.from_dict(episode_data)
-            episodes.append(episode)
-
         return episodes
 
-class Platforms(TableInterface):
-    def __init__(self, cursor:sqlite3.Cursor, conn:sqlite3.Connection):
-        self.cursor = cursor
-        self.conn = conn
-    
+class SQLitePlatforms(PlatformsTableInterface):
+    def __init__(self, database_manager: DatabaseManagerInterface):
+        super().__init__(database_manager)
+
     def create_table(self):
-        self.cursor.execute('''
+        query = '''
             CREATE TABLE IF NOT EXISTS platforms (
                 platform_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 platform_name TEXT UNIQUE NOT NULL,
                 creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        ''')
-
-    def insert_in_table(self, platform: Platform):
+        '''
+        self.database_manager.execute_non_query(query)
+    def insert_data(self, platform: Platform):
+        query = '''
+            INSERT INTO platforms (
+                platform_name
+            ) VALUES (?)
+        '''
+        params = (platform.platform_name,)
         try:
-            self.cursor.execute('''
-                INSERT INTO platforms (
-                    platform_name
-                ) VALUES (?)
-            ''', (platform.platform_name,))
-            self.conn.commit()
-            return self.cursor.lastrowid
+            primary_key = self.database_manager.execute_non_query(query, params)
+            if primary_key is None:
+                ValueError(f"Failed to retrieve primary key for platform: {platform.platform_name}")
+                return values.BAD_ID
+            return primary_key
         except sqlite3.Error as e:
-            print(f"An error occurred inserting platform: {platform.platform_name}.\nErrmsg: {e}")
-            self.conn.rollback()
+            logging.error(f"An error occurred inserting platform: {platform.platform_name}.\nErrmsg: {e}")
             return values.BAD_ID
 
-    def get_table_primary_key(self, platform_name:str) -> Optional[int]:
-        self.cursor.execute('SELECT platform_id FROM platforms WHERE platform_name = ?', (platform_name,))
-        result = self.cursor.fetchone()
-        if result:
-            return result[0]
-        else:
-            return values.BAD_ID
-        
-    def get_by_id(self, platform_id: int):
+    def get_primary_key(self, platform_name:str):
+        query = 'SELECT platform_id FROM platforms WHERE platform_name = ?'
+        params = (platform_name,)
+        value = self.database_manager.fetch_value(query, params)
+        if value:
+            try:
+                primary_key = int(value)
+            except (ValueError, TypeError):
+                return values.BAD_ID
+            return primary_key        
+        return values.BAD_ID
+
+    def get_by_id(self, platform_id:int):
         """
         Get a platform by its platform_id.
 
@@ -527,21 +502,20 @@ class Platforms(TableInterface):
         Returns:
             - The Platform object corresponding to the platform_id, or None if not found.
         """
-        self.cursor.execute('SELECT * FROM platforms WHERE platform_id = ?', (platform_id,))
-        row = self.cursor.fetchone()
+        query = 'SELECT * FROM platforms WHERE platform_id = ?'
+        params = (platform_id,)
+        row, column_names = self.database_manager.fetch_one_and_get_column_names(query, params)
         if row:
-            column_names = [column[0] for column in self.cursor.description]  # Obter os nomes das colunas
-            platform_data = dict(zip(column_names, row))  # Mapear nomes das colunas aos dados da plataforma
-            return Platform.from_dict(platform_data)
-        return None
+            data = dict(zip(column_names, row))  # Mapear nomes das colunas aos dados do anime
+            return Platform.from_dict(data)
+        return values.NOT_FOUND
     
-class Channels(TableInterface):
-    def __init__(self, cursor:sqlite3.Cursor, conn:sqlite3.Connection):
-        self.cursor = cursor
-        self.conn = conn
-    
+class SQLiteChannels(ChannelsTableInterface):
+    def __init__(self, database_manager: DatabaseManagerInterface):
+        super().__init__(database_manager)
+
     def create_table(self):
-        self.cursor.execute('''
+        query = '''
             CREATE TABLE IF NOT EXISTS channels (
                 channel_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 platform_id INTEGER NOT NULL,
@@ -558,54 +532,58 @@ class Channels(TableInterface):
                 ),
                 FOREIGN KEY (platform_id) REFERENCES platforms(platform_id) ON DELETE CASCADE ON UPDATE CASCADE
             )
-        ''')
+        '''
+        self.database_manager.execute_non_query(query)
 
-    def insert_in_table(self, channel: Channel):
+    def insert_data(self, channel: Channel):
+        query = '''
+            INSERT INTO channels (
+                platform_id, chat_name, chat_id, chat_description
+            ) VALUES (?, ?, ?, ?)
+        ''', 
+        params = (
+            channel.platform_id, channel.chat_name, channel.chat_id, channel.chat_description
+        )
         try:
-            self.cursor.execute('''
-                INSERT INTO channels (
-                    platform_id, chat_name, chat_id, chat_description
-                ) VALUES (?, ?, ?, ?)
-            ''', (
-                channel.platform_id, channel.chat_name, channel.chat_id, channel.chat_description
-            ))
-            self.conn.commit()
-            return self.cursor.lastrowid
+            primary_key = self.database_manager.execute_non_query(query, params)
+            if primary_key is None:
+                ValueError(f"Failed to retrieve primary key for channel: {channel.chat_name}")
+                return values.BAD_ID
+            return primary_key
         except sqlite3.Error as e:
-            print(f"An error occurred inserting channel: {channel.chat_name}.\nErrmsg: {e}")
-            self.conn.rollback()
+            logging.error(f"An error occurred inserting channel: {channel.chat_name}.\nErrmsg: {e}")
             return values.BAD_ID
 
-    def get_table_primary_key(self, platform_id:int, chat_name:str, chat_id:int):
+    def get_primary_key(self, platform_id:int, chat_id:int):
         '''
         You must provide a chat_name or a chat_id.
         '''
-        if chat_name:
-            self.cursor.execute('SELECT channel_id FROM channels WHERE platform_id = ? AND chat_name = ?', (platform_id, chat_name))
-        elif chat_id:
-            self.cursor.execute('SELECT channel_id FROM channels WHERE platform_id = ? AND chat_id = ?', (platform_id, chat_id))
-        result = self.cursor.fetchone()
-        if result:
-            return result[0]
-        else:
-            return values.BAD_ID
+        query = 'SELECT channel_id FROM channels WHERE platform_id = ? AND chat_id = ?'
+        params = (platform_id, chat_id) 
+        value = self.database_manager.fetch_value(query, params)
+        if value:
+            try:
+                primary_key = int(value)
+            except (ValueError, TypeError):
+                return values.BAD_ID
+            return primary_key        
+        return values.BAD_ID
         
-    def get_by_id(self, platform_id: int):
-        self.cursor.execute('SELECT * FROM platforms WHERE platform_id = ?', (platform_id,))
-        row = self.cursor.fetchone()
+    def get_by_id(self, channel_id: int):
+        query = 'SELECT * FROM channels WHERE channel_id = ?'
+        params = (channel_id,)
+        row, column_names = self.database_manager.fetch_one_and_get_column_names(query, params)
         if row:
-            column_names = [column[0] for column in self.cursor.description]  # Obter os nomes das colunas
-            platform_data = dict(zip(column_names, row))  # Mapear nomes das colunas aos dados da plataforma
-            return Channel.from_dict(platform_data)
-        return None
-
-class MsgsAn(TableInterface):
-    def __init__(self, cursor:sqlite3.Cursor, conn:sqlite3.Connection):
-        self.cursor = cursor
-        self.conn = conn
+            data = dict(zip(column_names, row))  # Mapear nomes das colunas aos dados do anime
+            return Channel.from_dict(data)
+        return values.NOT_FOUND
     
-    def create_table(self):
-        self.cursor.execute('''
+class SQLiteMsgsAn(MsgsAnTableInterface):
+    def __init__(self, database_manager: DatabaseManagerInterface):
+        super().__init__(database_manager)
+
+    def create_table(self) -> None:
+        query = '''
             CREATE TABLE IF NOT EXISTS msgs_an (
                 msg_an_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 anime_id INTEGER NOT NULL,
@@ -616,40 +594,55 @@ class MsgsAn(TableInterface):
                 FOREIGN KEY (anime_id) REFERENCES animes(anime_id) ON DELETE CASCADE ON UPDATE CASCADE,
                 FOREIGN KEY (channel_id) REFERENCES channels(channel_id) ON DELETE CASCADE ON UPDATE CASCADE
             )
-        ''')
+        '''
+        self.database_manager.execute_non_query(query)
 
-    def insert_in_table(self, msg_an: MsgAn):
-        try:
-            self.cursor.execute('''
+    def insert_data(self, msg_an: MsgAn) -> int:
+        query = '''
                 INSERT INTO msgs_an (
                     anime_id, message_id, channel_id
                 ) VALUES (?, ?, ?)
-            ''', (
+            '''
+        params = (
                 msg_an.anime_id, msg_an.message_id, msg_an.channel_id
-            ))
-            self.conn.commit()
-            return self.cursor.lastrowid
+            )
+        try:
+            primary_key = self.database_manager.execute_non_query(query, params)
+            if primary_key is None:
+                ValueError(f"Failed to retrieve primary key for msg_an: {msg_an.message_id}")
+                return values.BAD_ID
+            return primary_key
         except sqlite3.Error as e:
-            print(f"An error occurred inserting message for anime ID: {msg_an.anime_id}.\nErrmsg: {e}")
-            self.conn.rollback()
+            logging.error(f"An error occurred inserting, msg_an: {msg_an.message_id}.\nErrmsg: {e}")
             return values.BAD_ID
-
-    def get_table_primary_key(self, anime_id:int, channel_id:int) -> Optional[int]:
-        self.cursor.execute('SELECT msg_an_id FROM msgs_an WHERE anime_id = ? AND channel_id = ?', (anime_id, channel_id))
-        result = self.cursor.fetchone()
-        if result:
-            return result[0]
-        else:
-            return values.BAD_ID
-
-
-class MsgsEp(TableInterface):
-    def __init__(self, cursor:sqlite3.Cursor, conn:sqlite3.Connection):
-        self.cursor = cursor
-        self.conn = conn
+        
+    def get_primary_key(self, anime_id:int, channel_id:int) -> int:
+        query = 'SELECT msg_an_id FROM msgs_an WHERE anime_id = ? AND channel_id = ?'
+        params = (anime_id, channel_id)
+        value = self.database_manager.fetch_value(query, params)
+        if value:
+            try:
+                primary_key = int(value)
+            except (ValueError, TypeError):
+                return values.BAD_ID
+            return primary_key        
+        return values.BAD_ID
     
-    def create_table(self):
-        self.cursor.execute('''
+    def get_by_id(self, msg_an_id:int):
+        query = 'SELECT * FROM msg_an WHERE msgs_an_id = ?'
+        params = (msg_an_id,)
+        row, column_names = self.database_manager.fetch_one_and_get_column_names(query, params)
+        if row:
+            data = dict(zip(column_names, row))  # Mapear nomes das colunas aos dados do anime
+            return MsgAn.from_dict(data)
+        return values.NOT_FOUND
+
+class SQLiteMsgsEp(MsgsEpTableInterface):
+    def __init__(self, database_manager: DatabaseManagerInterface) -> None:
+        super().__init__(database_manager)
+
+    def create_table(self) -> None:
+        query = '''
             CREATE TABLE IF NOT EXISTS msgs_ep (
                 msg_ep_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 episode_id INTEGER NOT NULL,
@@ -660,32 +653,48 @@ class MsgsEp(TableInterface):
                 FOREIGN KEY (episode_id) REFERENCES episodes(episode_id) ON DELETE CASCADE ON UPDATE CASCADE,
                 FOREIGN KEY (channel_id) REFERENCES channels(channel_id) ON DELETE CASCADE ON UPDATE CASCADE
             )
-        ''')
+        '''
+        self.database_manager.execute_non_query(query)
 
-    def insert_in_table(self, msg_ep: MsgEp):
-        try:
-            self.cursor.execute('''
+    def insert_data(self,  msg_ep: MsgEp):
+        query = '''
                 INSERT INTO msgs_ep (
                     episode_id, message_id, channel_id
                 ) VALUES (?, ?, ?)
-            ''', (
-                msg_ep.episode_id, msg_ep.message_id, msg_ep.channel_id
-            ))
-            self.conn.commit()
-            return self.cursor.lastrowid
+            '''
+        params = (
+            msg_ep.episode_id, msg_ep.message_id, msg_ep.channel_id
+        )
+        try:
+            primary_key = self.database_manager.execute_non_query(query, params)
+            if primary_key is None:
+                ValueError(f"Failed to retrieve primary key for msg_ep: {msg_ep.message_id}")
+                return values.BAD_ID
+            return primary_key
         except sqlite3.Error as e:
-            print(f"An error occurred inserting message for episode ID: {msg_ep.episode_id}.\nErrmsg: {e}")
-            self.conn.rollback()
+            logging.error(f"An error occurred inserting msg_ep: {msg_ep.message_id}.\nErrmsg: {e}")
             return values.BAD_ID
-
-    def get_table_primary_key(self, episode_id:int, channel_id:int) -> Optional[int]:
-        self.cursor.execute('SELECT msg_ep_id FROM msgs_ep WHERE episode_id = ? AND channel_id = ?', (episode_id, channel_id))
-        result = self.cursor.fetchone()
-        if result:
-            return result[0]
-        else:
-            return values.BAD_ID
-
+        
+    def get_primary_key(self, episode_id:int, channel_id:int) -> int:
+        query = 'SELECT msg_ge_id FROM msgs_ge WHERE message_id = ? AND channel_id = ?'
+        params = (episode_id, channel_id)
+        value = self.database_manager.fetch_value(query, params)
+        if value:
+            try:
+                primary_key = int(value)
+            except (ValueError, TypeError):
+                return values.BAD_ID
+            return primary_key        
+        return values.BAD_ID
+    
+    def get_by_id(self, msg_ep_id: int):
+        query = 'SELECT * FROM msgs_ep WHERE msg_ep_id = ?'
+        params = (msg_ep_id,)
+        row, column_names = self.database_manager.fetch_one_and_get_column_names(query, params)
+        if row:
+            data = dict(zip(column_names, row))  # Mapear nomes das colunas aos dados do anime
+            return MsgEp.from_dict(data)
+        return values.NOT_FOUND
 
 class MsgsGe:
     def __init__(self, cursor):

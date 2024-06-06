@@ -1,7 +1,7 @@
 from tokenize import String
 from bs4 import BeautifulSoup
 import requests
-from src.shared_components import values
+from shared_components import values
 
 def get_title_and_hyperlinks_from_af(url_af=values.URL_AF_RELEASES, headers=values.HEADERS, extract_amount=10, start_page=1, extract_dub=False, print_log=False):
     """

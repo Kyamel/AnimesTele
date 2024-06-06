@@ -1,10 +1,10 @@
 import argparse
 import asyncio
-from local import db_sqlite3_acess
-from shared_components.api.bot_api.sensitive import token
-from shared_components.api.bot_api.animestele_bot import Telena
+from interface import db_acess
+from client.bot_api.sensitive import token
+from client.bot_api.animestele_bot import Telena
 import urllib.parse
-
+from interface.db_factory_and_manager import DatabaseManagerFactory
 from shared_components.queue import Queue
 
 async def main(mode):
@@ -38,15 +38,18 @@ async def local_windows_run():
 
 async def local_windows_debug():
     print("Debugging in local Windows mode...")
-    animes, episdoes = db_sqlite3_acess.extract_releasing_animes_from_af_and_insert_into_database(start_page=1, extract_amount=2, print_log=True)
-    telena = Telena(token=token.TOKEN_TELENA)  
+    animes, episdoes = db_acess.extract_releasing_animes_from_af_and_insert_into_database(start_page=1, extract_amount=2, print_log=True)
+    #telena = Telena(token=token.TOKEN_TELENA)  
     #for anime in animes:
         #await telena.add_anime_to_telegram(chat_id="@AnimesTele",mal_id=anime.mal_id, print_log=True)
 
     
 async def server_run():
     print("Running in server mode...")
-    animes, episdoes = db_sqlite3_acess.insert_custom_anime_from_af_into_database(
+    db_manager = DatabaseManagerFactory().create_sqlite_db_manager()
+    db_manager.create_tables()
+    animes, episdoes = db_acess.insert_custom_anime_from_af_into_database(
+        db_manager,
         url_af="https://animefire.plus/animes/tensei-shitara-dainana-ouji-datta-node-kimama-ni-majutsu-wo-kiwamemasu-todos-os-episodios",
         print_log=True
     )

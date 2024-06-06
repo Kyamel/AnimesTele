@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional
+from shared_components import values
 
 class Anime:
     def __init__(
@@ -23,7 +24,7 @@ class Anime:
         self.studios = studios
         self.producers = producers
         self.synopsis = synopsis
-        self.anime_id:Optional[int] = None
+        self.anime_id = values.UNDEFINED_ID
         self.creation_date:Optional[datetime] = None
 
     @classmethod
@@ -67,7 +68,7 @@ class Episode:
         self.download_link_hd = download_link_hd
         self.download_link_sd = download_link_sd
         self.temp = temp
-        self.episode_id:Optional[int] = None
+        self.episode_id = values.UNDEFINED_ID
         self.creation_date:Optional[datetime] = None
 
     @classmethod
@@ -95,13 +96,13 @@ class Episode:
 class Platform:
     def __init__(self, platform_name:str):
         self.platform_name = platform_name
-        self.platform_id:Optional[int] = None
+        self.platform_id = values.UNDEFINED_ID
         self.creation_date:Optional[datetime] = None
 
     @classmethod
     def from_dict(cls, data: dict):
         obj = cls(platform_name=data['platform_name'])
-        obj.platform_id = data.get('platform_id')
+        obj.platform_id = data['platform_id']
         obj.creation_date = data.get('creation_date')
         return obj
 
@@ -113,12 +114,12 @@ class Platform:
 
 
 class Channel:
-    def __init__(self, platform_id:int, chat_name:str, chat_id:str, chat_description:Optional[str]=None):
+    def __init__(self, platform_id:int, chat_name:str, chat_id:int, chat_description:Optional[str]=None):
         self.platform_id = platform_id
         self.chat_name = chat_name
         self.chat_id = chat_id
         self.chat_description = chat_description
-        self.channel_id:Optional[int] = None
+        self.channel_id = values.UNDEFINED_ID
         self.creation_date: Optional[datetime] = None
 
     @classmethod
@@ -129,7 +130,7 @@ class Channel:
             chat_id=data['chat_id'],
             chat_description=data.get('chat_description')
         )
-        obj.channel_id = data.get('channel_id')
+        obj.channel_id = data['channel_id']
         obj.creation_date = data.get('creation_date')
         return obj
 
@@ -145,7 +146,7 @@ class MsgAn:
         self.anime_id = anime_id
         self.message_id = message_id
         self.channel_id = channel_id
-        self.msg_an_id:Optional[int] = None
+        self.msg_an_id = values.UNDEFINED_ID
         self.creation_date:Optional[datetime] = None
 
     @classmethod
@@ -155,7 +156,7 @@ class MsgAn:
             message_id=data['message_id'],
             channel_id=data['channel_id']
         )
-        obj.msg_an_id = data.get('msg_an_id')
+        obj.msg_an_id = data['msg_an_id']
         obj.creation_date = data.get('creation_date')
         return obj
 
@@ -170,7 +171,7 @@ class MsgEp:
         self.episode_id = episode_id
         self.message_id = message_id
         self.channel_id = channel_id
-        self.msg_ep_id:Optional[int] = None
+        self.msg_ep_id = values.UNDEFINED_ID
         self.creation_date:Optional[datetime] = None
 
     @classmethod
@@ -180,7 +181,7 @@ class MsgEp:
             message_id=data['message_id'],
             channel_id=data['channel_id']
         )
-        obj.msg_ep_id = data.get('msg_ep_id')
+        obj.msg_ep_id = data['msg_ep_id']
         obj.creation_date = data.get('creation_date')
         return obj
 

@@ -11,9 +11,15 @@ URL_JIKAN_SEARCH_BY_MALID:str = "https://api.jikan.moe/v4/anime/"
 URLS_AF_FILTER_DOWNLOADS_LINKS:list[str] = ["https://s2.lightspeedst.net/s2/mp4/", "https://s2.lightspeedst.net/s2/mp4_temp/"]
 HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
 
-# Database
-BAD_ID:int = -1
-DATABASE_PATH:str = "data/animestele.db"
+# Database error codes
+BAD_ID = -1
+NOT_FOUND = -2
+EXISTS_IN_DB = -3
+UNDEFINED_ID = -4
+INSERT_FAILED = -5
+DATABASE_ERROR = -6
+BAD_INPUT = -7
+SQLITE_DATABASE_PATH:str = "data/animestele.db"
 
 # Telegram
 TELEGRAM_NAME:str = 'telegram'
@@ -26,3 +32,5 @@ ANIMESTELE_DESCRIPTION:str = (
     "Use nosso bot para pesquisar: "
     "- AnimesTeleOficialBot: @animestele_oficial_bot"
 )
+
+LOG_PATH = "error_log.txt"
